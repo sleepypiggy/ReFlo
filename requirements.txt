@@ -1,0 +1,2 @@
+# Convenience install from the repository root.
+-r backend/requirements.txt

@@ -1,0 +1,25 @@
+{
+  "assignment": {
+    "title": "Statistics assignment",
+    "deadline": "2026-11-12T19:15:00-07:00"
+  },
+  "remaining_minutes": 240,
+  "now": "2026-11-10T15:00:00-07:00",
+  "existing_blocks": [],
+  "available_windows": [
+    {
+      "start": "2026-11-10T16:00:00-07:00",
+      "end": "2026-11-10T18:15:00-07:00"
+    },
+    {
+      "start": "2026-11-11T09:00:00-07:00",
+      "end": "2026-11-11T11:15:00-07:00"
+    },
+    {
+      "start": "2026-11-12T18:15:00-07:00",
+      "end": "2026-11-12T19:15:00-07:00"
+    }
+  ],
+  "max_session_minutes": 60,
+  "break_minutes": 15
+}

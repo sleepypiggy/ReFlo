@@ -1,8 +1,12 @@
 # Schedule Maker Backend
 
-Python FastAPI starter for Schedule Maker. This setup includes a health endpoint,
-environment-based configuration, and CORS for the local Next.js frontend.
-Scheduling logic, database storage, and authentication are not implemented yet.
+FastAPI backend for Schedule Maker, with real single-assignment scheduling and
+replanning, fixed-event subtraction, sleep preferences, Pydantic request
+validation, UTC responses, and configurable CORS. Database storage and
+authentication are not implemented.
+
+See [API Integration](../README.md#api-integration) for the full contract and
+[the frontend handoff](../docs/FRONTEND_API.md) for connection examples.
 
 ## Requirements
 
@@ -91,9 +95,22 @@ The configuration follows FastAPI's documentation for
 backend/
   app/
     __init__.py
+    api.py            # Request/response models and planning endpoint
+    scheduler.py      # Scheduling and replanning algorithm
+    availability.py   # Free-window calculation
     config.py         # Environment settings
     main.py           # API application and health endpoint
   .env.example        # Configuration template (safe to commit)
   README.md
   requirements.txt
+```
+
+## Tests
+
+From the repository root in PowerShell:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability
+.\backend\.venv\Scripts\python.exe demo_week.py
 ```
