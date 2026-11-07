@@ -33,6 +33,8 @@ Balancing work and social life is hard for students, and the transition from hav
 ## Team Members
 
 - [Randy Du](https://github.com/sleepypiggy)
-- [George Li](https://github.com/Kevin968k)
+- [George Li](https://github.com/vermoshrank)
 - [Edward Lau](https://github.com/lauedward82-cloud)
-- [Kevin Li](https://github.com/vermoshrank)
+- [Kevin Li](https://github.com/Kevin968k)
+
+
