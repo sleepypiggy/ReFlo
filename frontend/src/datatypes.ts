@@ -60,10 +60,19 @@ export interface Preferences {
   breakDurationMinutes: number;
 }
 
+/** A skipped calendar entry retained after its task becomes unscheduled. */
+export interface SkippedSession {
+  taskId: string;
+  taskName: string;
+  startTime: Date;
+  endTime: Date;
+}
+
 export interface Schedule {
   /** Local date marking the first day of the displayed week. */
   weekStart: Date;
   tasks: Task[];
   events: Event[];
   preferences: Preferences;
+  skippedSessions?: SkippedSession[];
 }
