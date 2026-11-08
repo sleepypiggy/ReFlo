@@ -269,12 +269,12 @@ export default function Dashboard() {
       <fieldset className="app-guard" disabled={busy}>
         <div className="app-shell">
           <header className="topbar">
-            <Link className="brand" href="/" aria-label="Schedule Maker home">
+            <Link className="brand" href="/" aria-label="ReFlo home">
               <span className="brand-icon">
                 <CalendarDays size={23} />
               </span>
               <span>
-                Schedule <span className="brand-light">Maker</span>
+                Re<span className="brand-light">Flo</span>
               </span>
             </Link>
             <div className="header-actions">
@@ -529,7 +529,7 @@ export default function Dashboard() {
                   const url = URL.createObjectURL(new Blob([exportBackup(workspace)], { type: "application/json" }));
                   const link = document.createElement("a");
                   link.href = url;
-                  link.download = `schedule-maker-${new Date().toISOString().slice(0, 10)}.json`;
+                  link.download = `reflo-${new Date().toISOString().slice(0, 10)}.json`;
                   link.click();
                   setTimeout(() => URL.revokeObjectURL(url), 1000);
                 }}>Export backup</button>

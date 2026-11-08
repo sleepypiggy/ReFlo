@@ -65,6 +65,8 @@ export function moveCalendarItem(schedule: Schedule, move: CalendarMove, now = n
   const from = midnight(start);
   from.setDate(from.getDate() - 1);
   for (let day = from; day < end; day = nextDay(day)) {
+    if (overlaps(start, end, day, clock(day, "06:00")))
+      return { error: "Study sessions must stay between 6:00 a.m. and midnight." };
     const bed = clock(day, preferences.sleepHours.bedtime);
     let wake = clock(day, preferences.sleepHours.wakeUpTime);
     if (wake <= bed) wake = nextDay(wake);

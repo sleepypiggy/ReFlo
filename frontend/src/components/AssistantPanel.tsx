@@ -95,7 +95,7 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
       }
     } catch (error) {
       setRetry(messages);
-      setError(error instanceof Error ? error.message : "Assistant request failed. Your calendar has not changed.");
+      setError(error instanceof Error ? error.message : "Flo request failed. Your calendar has not changed.");
     } finally { working.current = false; setPending(false); onBusy(false); }
   }
   function submit(event: FormEvent) {
@@ -127,8 +127,8 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
   const field = (value: string | number | null) => value === null || value === "" ? "Not provided" : String(value);
 
   return (
-    <section className="assistant-panel form-stack" aria-label="Schedule assistant">
-      <h2>Schedule assistant</h2>
+    <section className="assistant-panel form-stack" aria-label="Flo">
+      <h2>Flo</h2>
       <p className="muted">Add an assignment or event, then review the changes.</p>
       <div className="assistant-actions">
         <button className="button" type="button" onClick={() => setAdviceRequests(count => count + 1)}>
@@ -155,11 +155,11 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
         </section>}
       </section>}
       {storageNotice && <p className="muted small" role="status">{storageNotice}</p>}
-      <div className="assistant-transcript" role="log" aria-label="Assistant conversation" aria-live="polite" ref={transcript}>
+      <div className="assistant-transcript" role="log" aria-label="Conversation with Flo" aria-live="polite" ref={transcript}>
         {!chat.messages.length && <p className="muted small">Try “Add my integration worksheet, due Tuesday.”</p>}
         {chat.messages.map((message, index) => (
           <div key={index} className={`chat-message chat-${message.role}`}>
-            <span className="chat-speaker">{message.role === "user" ? "You" : "Assistant"}</span>
+            <span className="chat-speaker">{message.role === "user" ? "You" : "Flo"}</span>
             <p>{message.content}</p>
           </div>
         ))}
@@ -184,7 +184,7 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
       )}
       <form className="form-stack" onSubmit={submit}>
         <label>
-          Assistant message
+          Message Flo
           <textarea required maxLength={10000} rows={2} value={input} disabled={!loaded || pending}
             onChange={(event) => { setInput(event.target.value); setPreview(null); }}
             placeholder="Ask to add an assignment or event, or answer a question…" />

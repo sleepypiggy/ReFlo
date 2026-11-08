@@ -247,7 +247,7 @@ export function importCalendarEvents(schedule: Schedule, selected: Event[]): Sch
 export function exportStudyCalendar(schedule: Schedule, now = new Date()): string {
   const calendar = new ICAL.Component("vcalendar");
   calendar.updatePropertyWithValue("version", "2.0");
-  calendar.updatePropertyWithValue("prodid", "-//Schedule Maker//Study planner//EN");
+  calendar.updatePropertyWithValue("prodid", "-//ReFlo//Study planner//EN");
   calendar.updatePropertyWithValue("calscale", "GREGORIAN");
   calendar.updatePropertyWithValue("method", "PUBLISH");
   for (const block of schedule.studyBlocks.filter(block => block.status === "planned" && block.endTime > now)) {

@@ -90,6 +90,8 @@ class PreferencesInput(InputModel):
 
     @model_validator(mode="after")
     def different_hours(self):
+        if self.wake_up_time < time(6):
+            raise ValueError("Wake-up time must be 06:00 or later")
         if self.wake_up_time == self.bedtime:
             raise ValueError("Wake-up and bedtime must differ")
         return self
@@ -233,7 +235,7 @@ def _allocate(
         while remaining and day <= last_day:
             midnight = wall(day, time.min, zone)
             next_midnight = wall(day + timedelta(days=1), time.min, zone)
-            day_start, day_end = max(now, midnight), min(task.deadline, next_midnight)
+            day_start, day_end = max(now, wall(day, time(6), zone)), min(task.deadline, next_midnight)
             if day_start < day_end:
                 # Compare instants in UTC: local datetime ordering ignores fold
                 # when both endpoints share a ZoneInfo at the fall-back hour.
@@ -306,7 +308,7 @@ def _space_dayparts(request: ScheduleRequest, blocks: list[tuple[str, datetime, 
     for day, original in sorted(grouped.items()):
         midnight = wall(day, time.min, zone)
         tomorrow = wall(day + timedelta(days=1), time.min, zone)
-        start, end = max(now, midnight), tomorrow
+        start, end = max(now, wall(day, time(6), zone)), tomorrow
         wake, bed = preferences.wake_up_time, preferences.bedtime
         if wake < bed:
             windows = [Window(max(start, wall(day, wake, zone)), min(end, wall(day, bed, zone)))]
@@ -439,6 +441,78 @@ def _spread(request: ScheduleRequest, packed: list[tuple[str, datetime, datetime
     return _space_dayparts(request, chosen, availability)
 
 
+def _tidy_durations(request: ScheduleRequest, blocks: list[tuple[str, datetime, datetime]], availability: dict):
+    """Prefer five-minute durations without changing task totals or start times.
+
+    Transfer at most four minutes between two new sessions of the same task.
+    Keep exact odd totals and constrained placements when rounding cannot fit.
+    Locked history is never changed.
+    """
+    result = list(blocks)
+    zone = ZoneInfo(request.timezone)
+    preferences = request.preferences
+    tasks = {task.id: task for task in request.tasks}
+    pause = timedelta(minutes=preferences.break_minutes)
+    fixed = availability.get("fixed", [])
+    history = [Window(block.start - (pause if block.status != "skipped" else timedelta()),
+                      block.end + (pause if block.status != "skipped" else timedelta()))
+               for block in request.locked_blocks]
+
+    def valid_extension(index):
+        task_id, start, end = result[index]
+        day = start.astimezone(zone).date()
+        midnight = wall(day, time.min, zone)
+        tomorrow = wall(day + timedelta(days=1), time.min, zone)
+        wake, bed = preferences.wake_up_time, preferences.bedtime
+        if wake < bed:
+            waking = [Window(wall(day, wake, zone), wall(day, bed, zone))]
+        else:
+            waking = [Window(midnight, wall(day, bed, zone)),
+                      Window(wall(day, wake, zone), tomorrow)]
+        if end > tasks[task_id].deadline or not any(window.start <= start < end <= window.end for window in waking):
+            return False
+        occupied = fixed + history + [Window(other_start - pause, other_end + pause)
+                                     for other_index, (_, other_start, other_end) in enumerate(result)
+                                     if other_index != index]
+        if any(window.start < end and window.end > start for window in occupied):
+            return False
+        used = sum(minutes_in_day(Window(other_start, other_end), midnight, tomorrow)
+                   for _, other_start, other_end in result)
+        used += sum(minutes_in_day(Window(block.start, block.end), midnight, tomorrow)
+                    for block in request.locked_blocks if block.status != "skipped")
+        return used <= preferences.max_daily_study_minutes
+
+    for index in range(len(result)):
+        task_id, start, end = result[index]
+        duration = int((end - start) // MINUTE)
+        remainder = duration % 5
+        if not remainder:
+            continue
+        # Prefer the smallest adjustment, rounding down on equal distance.
+        for delta in sorted((-remainder, 5 - remainder), key=lambda value: (abs(value), value)):
+            if not 15 <= duration + delta <= preferences.max_session_minutes:
+                continue
+            adjusted = False
+            for other_index, other in enumerate(result):
+                other_task, other_start, other_end = other
+                other_duration = int((other_end - other_start) // MINUTE)
+                if other_index == index or other_task != task_id or other_duration % 5 == 0:
+                    continue
+                if not 15 <= other_duration - delta <= preferences.max_session_minutes:
+                    continue
+                result[index] = (task_id, start, end + delta * MINUTE)
+                result[other_index] = (task_id, other_start, other_end - delta * MINUTE)
+                # Shortening is always safe; validate only the extended session.
+                if valid_extension(index if delta > 0 else other_index):
+                    adjusted = True
+                    break
+                result[index] = (task_id, start, end)
+                result[other_index] = other
+            if adjusted:
+                break
+    return result
+
+
 @router.post("/schedule", response_model=ScheduleResponse)
 def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
     """Try all work in deadline order, then admit work by weighted pressure.
@@ -503,6 +577,7 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
         output = _allocate(request, admitted, availability)
 
     output = _spread(request, output, availability)
+    output = _tidy_durations(request, output, availability)
     used_ids = {block.id for block in request.locked_blocks}
     result = []
     for task_id, start, end in sorted(output, key=lambda block: (block[1], block[0], block[2])):

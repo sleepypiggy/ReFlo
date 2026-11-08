@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Schedule Maker API"
+    app_name: str = "ReFlo API"
     cors_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

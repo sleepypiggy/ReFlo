@@ -1,5 +1,42 @@
 import { test, expect } from "@playwright/test";
 
+test("very short event titles and boundary-height labels fit as complete lines", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
+  await page.addInitScript(() => {
+    const lengths = [1, 5, 10, 15, 20, 25, 45, 65, 80];
+    const schedule = {
+      weekStart: "2026-11-09T00:00:00Z", source: "demo", tasks: [], studyBlocks: [], warnings: [],
+      topics: [{ id: "topic", name: "Class topic", color: "#237854" }],
+      events: lengths.map((minutes, index) => {
+        const start = Date.parse("2026-11-10T09:00:00Z") + index * 90 * 60000;
+        return { id: `boundary-${minutes}`, name: `Boundary ${minutes} min`, topicId: "topic",
+          startTime: new Date(start).toISOString(), endTime: new Date(start + minutes * 60000).toISOString(),
+          timeMinutes: minutes, remainingTimeMinutes: minutes };
+      }),
+      preferences: { maxStudyTimeMinutes: 240, maxSessionTimeMinutes: 60, breakDurationMinutes: 0, sleepHours: { wakeUpTime: "07:00", bedtime: "23:00" } },
+    };
+    localStorage.setItem("schedule-maker:v1", JSON.stringify({ mode: "demo", demo: schedule, backend: { ...schedule, source: "backend" } }));
+  });
+  await page.goto("/");
+  for (const view of ["Week", "Day"]) {
+    await page.getByRole("button", { name: view, exact: true }).click();
+    for (const minutes of [1, 5, 10, 15, 20, 25, 45, 65, 80]) {
+      const event = page.locator(`.fixed-event[title="Boundary ${minutes} min"]`);
+      await expect(event).toBeVisible();
+      const bounds = await event.evaluate(element => {
+        const box = element.getBoundingClientRect();
+        const bottom = box.bottom - parseFloat(getComputedStyle(element).borderBottomWidth);
+        return [...element.querySelectorAll(".calendar-event-title, .calendar-event-time, .calendar-event-topic")]
+          .filter(label => getComputedStyle(label).display !== "none")
+          .map(label => ({ label: label.className, bottom: label.getBoundingClientRect().bottom, availableBottom: bottom }));
+      });
+      for (const bound of bounds) {
+        expect(bound.bottom, `${view}: ${minutes} min ${bound.label} clips vertically`).toBeLessThanOrEqual(bound.availableBottom + 0.1);
+      }
+    }
+  }
+});
+
 test("short adjacent blocks clip text, retain details, and stay readable across views", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
   const eventName = "Brief meeting with a very long title that must stay inside its block";
@@ -66,6 +103,11 @@ test("short adjacent blocks clip text, retain details, and stay readable across 
       expect(content.y + content.height).toBeLessThanOrEqual(box.y + box.height + 1);
       await expect(block.locator(".calendar-event-content")).toHaveAttribute("title", /Nov 10/);
     }
+    const meetingBox = (await meeting.boundingBox())!;
+    const studyBox = (await study.boundingBox())!;
+    const overlapX = Math.min(meetingBox.x + meetingBox.width, studyBox.x + studyBox.width) - Math.max(meetingBox.x, studyBox.x);
+    const overlapY = Math.min(meetingBox.y + meetingBox.height, studyBox.y + studyBox.height) - Math.max(meetingBox.y, studyBox.y);
+    expect(overlapX > 0.5 && overlapY > 0.5, "adjacent event and study labels must not cover each other").toBe(false);
     expect((await meeting.boundingBox())!.height).toBeLessThan((await page.locator('.fixed-event').filter({ hasText: "Long meeting" }).boundingBox())!.height);
     await page.screenshot({ path: `test-results/compact-${view.toLowerCase()}.png`, fullPage: true });
   }

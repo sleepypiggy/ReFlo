@@ -13,10 +13,10 @@ async function start(page: Page) {
   await page.clock.setFixedTime(new Date("2026-11-04T08:00:00Z"));
   await page.goto("/");
   await page.getByLabel("Data source").selectOption("backend");
-  await expect(page.getByRole("log", { name: "Assistant conversation" })).toBeVisible();
+  await expect(page.getByRole("log", { name: "Conversation with Flo" })).toBeVisible();
 }
 async function send(page: Page, text: string) {
-  await page.getByLabel("Assistant message").fill(text);
+  await page.getByLabel("Message Flo").fill(text);
   await page.getByRole("button", { name: "Send message", exact: true }).click();
 }
 
@@ -73,6 +73,7 @@ test("asks for weight, restores its pending draft, previews shortages and applie
   expect(await saved(page)).toEqual(before);
   await page.setViewportSize({ width: 320, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Show assistant", exact: true }).click();
   await page.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(preview).toHaveCount(0);
   await expect(page.locator(".study-event")).toHaveCount(1);
@@ -82,6 +83,7 @@ test("asks for weight, restores its pending draft, previews shortages and applie
   expect((await saved(page)).tasks[0].name).toBe("Math worksheet");
   await expect(page.locator(".study-event")).toHaveCount(0);
   await page.reload();
+  await page.getByRole("button", { name: "Show assistant", exact: true }).click();
   await expect(page.getByRole("log")).toContainText("Assignment added");
   await expect(pending).toHaveCount(0);
   expect((await saved(page)).tasks).toHaveLength(1);
@@ -126,7 +128,7 @@ test("provider failures, invalid ready drafts, and scheduling failures preserve 
     return route.fulfill({ status: 500, json: { error: "Scheduling failed" } });
   });
   await send(page, "Add Math worksheet due Tuesday 5pm, two hours, 15%");
-  const alert = page.getByRole("region", { name: "Schedule assistant", exact: true }).getByRole("alert");
+  const alert = page.getByRole("region", { name: "Flo", exact: true }).getByRole("alert");
   await expect(alert).toContainText("Assistant unavailable");
   expect(await saved(page)).toEqual(before);
   status = 200; response = ready({ ...assignment, grade_weight: null });
