@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Local pnpm cache
+/.pnpm-store/
+
+# Temporary lockfile backup
+/frontend/pnpm-lock.yaml.backup
