@@ -3,10 +3,10 @@
 Current integrated application checks:
 
 - Python API, availability and dashboard scheduling: **93 tests passed**.
-- Frontend calendar, task, topic, plan-accounting and backup validation: **70 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **71 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **19 passed** in Microsoft Edge against the production build.
+- `npm run test:e2e`: **20 passed** in Microsoft Edge against the production build.
 - `npm run test:live`: **7 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
@@ -107,3 +107,10 @@ review and calendar highlights. Live coverage includes a partial fit (15 minutes
 scheduled and 15 unscheduled), discard without changes, Apply and persistence.
 Next.js route type generation was also verified before the TypeScript check,
 matching the updated CI workflow.
+
+Drag-lock explanations use the same reason function as move eligibility and
+rejection. Calendar blocks show a lock with a hover explanation and accessible
+text; the session dialog exposes the reason on keyboard and mobile. Browser
+coverage verifies past/started/locked reasons and automatic updates when a future
+session starts. Unit coverage also includes finalized statuses, exact boundaries,
+and draggable manual placements. The mobile dialog was visually checked.

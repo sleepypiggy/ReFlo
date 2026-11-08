@@ -46,6 +46,12 @@ restore work for both demo and real workspaces, with validation and confirmation
 See [the frontend guide](frontend/README.md#planning-controls-and-backups) for details.
 Automated project checks are defined in `.github/workflows/checks.yml`.
 
+Study sessions that cannot be dragged show a lock icon. Hover over the block or
+open it (click, Enter or Space) to see the specific reason: past time, already
+started, locked, completed, unfinished or skipped history. Move failures explain
+deadline, sleep, fixed-event, break and daily-limit conflicts without changing
+the saved plan. Indicators refresh as sessions reach their start time.
+
 ## Study Spacing
 
 The dashboard now spreads assignment work across available days by default, with
@@ -79,8 +85,8 @@ change-review panel and calendar highlights show the applied changes.
 
 The optional Gemini `POST /assistant/parse` endpoint is also integrated. See
 [assistant setup and draft contract](docs/ASSISTANT_API.md). Calendar scheduling
-works without a Gemini key; assistant input and Apply/Cancel preview UI are not
-yet implemented.
+works without a Gemini key; the assistant supports drafts, clarification,
+preview, Apply and Discard.
 
 ### Dashboard endpoint: `POST /schedule`
 

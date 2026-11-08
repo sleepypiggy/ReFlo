@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar, { type CalendarRef } from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
@@ -7,11 +7,11 @@ import classicThemePlugin from "@fullcalendar/react/themes/classic";
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
 import "@fullcalendar/react/themes/classic/palette.css";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, LockKeyhole } from "lucide-react";
 import type { Event, StudyBlock, Task, Topic } from "@/datatypes";
 import { expandEvents, weekStart } from "@/lib/calendar";
 import { colorPalette } from "@/lib/topics";
-import { canMoveStudy, type CalendarMove } from "@/lib/calendarMoves";
+import { canMoveStudy, studyMoveReason, type CalendarMove } from "@/lib/calendarMoves";
 
 export default function WeeklyCalendar({
   events,
@@ -35,6 +35,11 @@ export default function WeeklyCalendar({
   changedBlockIds?: string[];
 }) {
   const ref = useRef<CalendarRef>(null);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
   const [title, setTitle] = useState("");
   const [view, setView] = useState("timeGridWeek");
   const [range, setRange] = useState(() => {
@@ -72,7 +77,7 @@ export default function WeeklyCalendar({
           "Study session",
         start: block.startTime,
         end: block.endTime,
-        startEditable: canMoveStudy(block),
+        startEditable: canMoveStudy(block, now),
         color:
           block.status === "completed"
             ? "var(--surface-soft)"
@@ -99,11 +104,12 @@ export default function WeeklyCalendar({
           status: block.status,
           topicName: topic?.name,
           changed: changedBlockIds?.includes(block.id),
+          moveReason: studyMoveReason(block, now),
         },
       };
       }),
     ],
-    [events, range, studyBlocks, tasks, topics, changedBlockIds],
+    [events, range, studyBlocks, tasks, topics, changedBlockIds, now],
   );
   return (
     <section className="calendar-card" aria-label="Study calendar">
@@ -215,21 +221,23 @@ export default function WeeklyCalendar({
             else onEventClick(info.event.extendedProps.eventId);
           }}
           eventContent={(info) => (
-            <div className="calendar-event-content">
+            <div className="calendar-event-content" title={info.event.extendedProps.moveReason ?? undefined}
+              ref={element => {
+                element?.closest(".calendar-event")?.setAttribute("title", info.event.extendedProps.moveReason
+                  ? `${info.event.title} — ${info.event.extendedProps.moveReason}` : info.event.title);
+              }}>
               <div className="calendar-event-time">{info.timeText}</div>
-              <div className="calendar-event-title">{info.event.title}</div>
+              <div className="calendar-event-title">{info.event.extendedProps.moveReason && <LockKeyhole className="session-lock-icon" size={12} aria-hidden="true" />}{info.event.title}</div>
+              {info.event.extendedProps.moveReason && <span className="move-reason-text">{info.event.extendedProps.moveReason}</span>}
               {info.event.extendedProps.changed && <div className="calendar-change-label">Updated</div>}
               {info.event.extendedProps.topicName && <div className="calendar-event-topic">{info.event.extendedProps.topicName}</div>}
             </div>
           )}
           eventDidMount={(info) => {
             info.el.setAttribute("tabindex", "0");
-            info.el.setAttribute("title", info.event.title);
+            info.el.setAttribute("title", info.event.extendedProps.moveReason
+              ? `${info.event.title} — ${info.event.extendedProps.moveReason}` : info.event.title);
             info.el.setAttribute("role", "button");
-            info.el.setAttribute(
-              "aria-label",
-              `${info.event.title}, ${info.event.extendedProps.status ?? "fixed commitment"}`,
-            );
             info.el.addEventListener("keydown", (event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
@@ -258,7 +266,7 @@ export default function WeeklyCalendar({
             Unfinished / skipped
           </span>
         </div>
-        <span className="muted small">Drag to move; click a session to update progress</span>
+        <span className="muted small">Drag to move. Sessions with a lock cannot move; hover or open one to see why.</span>
       </div>
     </section>
   );

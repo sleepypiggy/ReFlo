@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Check, RotateCcw } from "lucide-react";
+import { Check, LockKeyhole, RotateCcw } from "lucide-react";
 import type { StudyBlock, Task } from "@/datatypes";
 import { dateLabel, duration } from "@/lib/calendar";
+import { studyMoveReason } from "@/lib/calendarMoves";
 
 export default function StudySessionModal({
   block,
@@ -20,6 +21,7 @@ export default function StudySessionModal({
 }) {
   const [unfinished, setUnfinished] = useState(false);
   const canAct = block.status === "planned" && !block.locked;
+  const moveReason = studyMoveReason(block);
   return (
     <div className="form-stack">
       <span
@@ -37,6 +39,10 @@ export default function StudySessionModal({
       {!canAct && (
         <p className="muted">This session is saved in your study history.</p>
       )}
+      {moveReason && <div className="session-move-reason" role="note">
+        <LockKeyhole size={17} aria-hidden="true" />
+        <p><strong>Why this session cannot move</strong><br />{moveReason}</p>
+      </div>}
       {canAct && !unfinished && (
         <>
           <button

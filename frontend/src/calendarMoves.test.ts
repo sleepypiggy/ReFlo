@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Task, type StudyBlock, type Schedule } from "./datatypes";
-import { moveCalendarItem, canMoveStudy } from "./lib/calendarMoves";
+import { moveCalendarItem, canMoveStudy, studyMoveReason } from "./lib/calendarMoves";
 import { expandEvents, isPreserved } from "./lib/calendar";
 import { toScheduleRequest, fromScheduleResponse } from "./lib/apiAdapter";
 import { emptySchedule, demoResult } from "./lib/mockData";
@@ -46,11 +46,23 @@ describe("calendar study moves", () => {
     for (const block of [session("study", 9), { ...session(), startTime: now },
       { ...session(), locked: true }, ...(["completed", "unfinished", "skipped"] as const).map(status => ({ ...session(), status }))]) {
       assert.equal(canMoveStudy(block, now), false);
-      rejected({ ...plan(), studyBlocks: [block] }, at(11, 14), /Past, started, or finalized/);
+      const before = { ...plan(), studyBlocks: [block] };
+      assert.equal(move(before, at(11, 14)).error, studyMoveReason(block, now));
     }
     rejected(plan(), now, /future/);
     rejected(plan(), at(9, 14), /future/);
     rejected(plan(), new Date(NaN), /valid date/);
+  });
+  it("explains each move restriction and permits future manual placements", () => {
+    assert.match(studyMoveReason(session("study", 9), now)!, /in the past/);
+    assert.match(studyMoveReason(session("study", 10, 8), at(10, 8, 30))!, /already started/);
+    assert.match(studyMoveReason({ ...session(), locked: true }, now)!, /locked/);
+    for (const status of ["completed", "unfinished", "skipped"] as const) {
+      assert.match(studyMoveReason({ ...session(), status }, now)!, new RegExp(status));
+    }
+    assert.equal(studyMoveReason({ ...session(), manuallyMoved: true }, now), null);
+    assert.equal(studyMoveReason(session(), at(10, 10)), "This session has already started and cannot be moved. You can still record your progress.");
+    assert.match(studyMoveReason(session(), at(10, 11))!, /in the past/);
   });
   it("enforces deadlines and both study limits at their boundaries", () => {
     assert.ok(move(plan(), at(13, 16)).schedule);

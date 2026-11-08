@@ -6,8 +6,18 @@ export type CalendarMove =
   | { type: "fixed"; id: string; occurrenceStart: Date; startTime: Date };
 export type MoveResult = { schedule: Schedule; error?: never } | { error: string; schedule?: never };
 
+export function studyMoveReason(block: StudyBlock, now = new Date()): string | null {
+  if (block.status === "completed") return "This session is completed and stays in your study history.";
+  if (block.status === "unfinished") return "This unfinished session stays in your history. Move the replacement study sessions instead.";
+  if (block.status === "skipped") return "This skipped session stays in your history. Move the replacement study sessions instead.";
+  if (block.locked) return "This session is locked to preserve your study history.";
+  if (block.endTime <= now) return "This session is in the past and cannot be moved. You can still record your progress.";
+  if (block.startTime <= now) return "This session has already started and cannot be moved. You can still record your progress.";
+  return null;
+}
+
 export function canMoveStudy(block: StudyBlock, now = new Date()) {
-  return block.status === "planned" && !block.locked && block.startTime > now;
+  return studyMoveReason(block, now) === null;
 }
 
 const overlaps = (start: Date, end: Date, from: Date, to: Date) => start < to && end > from;
@@ -43,7 +53,8 @@ export function moveCalendarItem(schedule: Schedule, move: CalendarMove, now = n
   }
   const block = schedule.studyBlocks.find(block => block.id === move.id);
   if (!block) return { error: "This study session no longer exists. Refresh the calendar." };
-  if (!canMoveStudy(block, now)) return { error: "Past, started, or finalized study sessions cannot be moved." };
+  const reason = studyMoveReason(block, now);
+  if (reason) return { error: reason };
   if (start <= now) return { error: "Study sessions must start in the future." };
   const end = new Date(+start + +block.endTime - +block.startTime);
   const task = schedule.tasks.find(task => task.id === block.taskId);
