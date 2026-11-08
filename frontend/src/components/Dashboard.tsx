@@ -3,14 +3,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowUpRight,
   BookOpen,
   CalendarDays,
   CheckCheck,
   Clock3,
   FlaskConical,
-  GraduationCap,
-  Layers3,
   LoaderCircle,
   Plus,
   Radio,
@@ -32,6 +29,7 @@ import PreferencesPanel from "./PreferencesPanel";
 import StudySessionModal from "./StudySessionModal";
 import WeeklyCalendar from "./WeeklyCalendar";
 import TimeShortagePanel from "./TimeShortagePanel";
+import ThemeToggle from "./ThemeToggle";
 
 type Dialog =
   | { type: "assignment"; task?: Task }
@@ -206,16 +204,32 @@ export default function Dashboard() {
       </a>
       <fieldset className="app-guard" disabled={busy}>
         <div className="app-shell">
-          <aside className="sidebar">
+          <header className="topbar">
             <Link className="brand" href="/" aria-label="Schedule Maker home">
               <span className="brand-icon">
-                <Layers3 size={23} />
+                <CalendarDays size={23} />
               </span>
               <span>
-                Schedule<span className="brand-light">Maker</span>
+                Schedule <span className="brand-light">Maker</span>
               </span>
             </Link>
-            <div className="workspace-label">STUDENT WORKSPACE</div>
+            <div className="header-actions">
+              <div className="mode-control">
+                <FlaskConical size={15} />
+                <label htmlFor="mode">Data source</label>
+                <select
+                  id="mode"
+                  value={mode}
+                  onChange={(event) => switchMode(event.target.value as AppMode)}
+                >
+                  <option value="demo">Demo mode</option>
+                  <option value="backend">Real backend</option>
+                </select>
+              </div>
+              <ThemeToggle />
+            </div>
+          </header>
+          <aside className="sidebar">
             <nav aria-label="Main navigation">
               <button
                 className={
@@ -236,29 +250,8 @@ export default function Dashboard() {
                 Assignments
                 <span className="nav-count">{schedule.tasks.length}</span>
               </button>
-              <button
-                className="nav-item"
-                onClick={() => setDialog({ type: "preferences" })}
-              >
-                <Settings2 size={19} />
-                Preferences
-              </button>
             </nav>
             <div className="sidebar-actions">
-              <button
-                className="button"
-                onClick={() => setDialog({ type: "assignment" })}
-              >
-                <Plus size={17} />
-                Add Assignment
-              </button>
-              <button
-                className="button"
-                onClick={() => setDialog({ type: "event" })}
-              >
-                <Plus size={17} />
-                Add Event
-              </button>
               <button
                 className="button primary"
                 onClick={() => void scheduleWork()}
@@ -272,14 +265,13 @@ export default function Dashboard() {
               </button>
             </div>
             <div className="sidebar-bottom">
-              <div className="rest-note">
-                <GraduationCap size={23} />
-                <h3>Make time for life.</h3>
-                <p>Your study plan should work around you.</p>
-                <button onClick={() => setDialog({ type: "preferences" })}>
-                  Set your preferences <ArrowUpRight size={14} />
-                </button>
-              </div>
+              <button
+                className="nav-item"
+                onClick={() => setDialog({ type: "preferences" })}
+              >
+                <Settings2 size={19} />
+                Preferences
+              </button>
               <div className="student">
                 <span className="avatar">S</span>
                 <div>
@@ -291,94 +283,30 @@ export default function Dashboard() {
             </div>
           </aside>
           <div className="dashboard">
-            <header className="topbar">
-              <div className="breadcrumb">
-                Workspace <span>/</span>{" "}
-                <strong>
-                  {section === "calendar" ? "Calendar" : "Assignments"}
-                </strong>
-              </div>
-              <div className="mode-control">
-                <FlaskConical size={15} />
-                <label htmlFor="mode">Data source</label>
-                <select
-                  id="mode"
-                  value={mode}
-                  onChange={(event) =>
-                    switchMode(event.target.value as AppMode)
-                  }
-                >
-                  <option value="demo">Demo mode</option>
-                  <option value="backend">Real backend</option>
-                </select>
-              </div>
-            </header>
             <main id="main" className="main-content">
               <div className="page-heading">
                 <div>
-                  <div className="eyebrow">
-                    A LITTLE STRUCTURE. MORE ROOM TO BREATHE.
-                  </div>
                   <h1>
                     {section === "calendar"
-                      ? "Your week, with a plan."
-                      : "Your assignments."}
+                      ? "My Schedule"
+                      : "My Assignments"}
                   </h1>
-                  <p>Keep your commitments. Find time for what&apos;s due.</p>
                 </div>
-                <span
-                  className={`source-badge ${mode === "backend" ? "real" : ""}`}
-                >
-                  {mode === "demo" ? (
-                    <FlaskConical size={15} />
-                  ) : (
-                    <Radio size={15} />
-                  )}
-                  {mode === "demo"
-                    ? "Mock data · demo workspace"
-                    : "Backend workspace"}
-                </span>
-              </div>
-              <div className="stats-grid">
-                <div className="stat">
-                  <span className="stat-icon purple">
-                    <BookOpen size={20} />
-                  </span>
-                  <div>
-                    <span>Active assignments</span>
-                    <strong>
-                      {
-                        schedule.tasks.filter(
-                          (task) => task.remainingTimeMinutes > 0,
-                        ).length
-                      }
-                      <small> to work on</small>
-                    </strong>
-                  </div>
-                </div>
-                <div className="stat">
-                  <span className="stat-icon green">
-                    <Clock3 size={20} />
-                  </span>
-                  <div>
-                    <span>Planned study time</span>
-                    <strong>
-                      {hours(planned)}
-                      <small> on your calendar</small>
-                    </strong>
-                  </div>
-                </div>
-                <div className="stat">
-                  <span className="stat-icon blue">
-                    <CheckCheck size={20} />
-                  </span>
-                  <div>
-                    <span>Completed sessions</span>
-                    <strong>
-                      {completed}
-                      <small> progress adds up</small>
-                    </strong>
-                  </div>
+                <div className="page-actions">
+                  <button
+                    className="button"
+                    onClick={() => setDialog({ type: "assignment" })}
+                  >
+                    <Plus size={17} />
+                    Add Assignment
+                  </button>
+                  <button
+                    className="button"
+                    onClick={() => setDialog({ type: "event" })}
+                  >
+                    <Plus size={17} />
+                    Add Event
+                  </button>
                 </div>
               </div>
               <div className="status-area" aria-live="polite">
@@ -414,48 +342,96 @@ export default function Dashboard() {
               )}
               <div
                 className={
-                  section === "calendar" ? "work-grid" : "assignment-view"
+                  section === "calendar" ? "work-grid" : "assignment-page"
                 }
               >
                 {section === "calendar" ? (
-                  <>
-                    <WeeklyCalendar
-                      events={schedule.events}
-                      tasks={schedule.tasks}
-                      studyBlocks={schedule.studyBlocks}
-                      onStudyClick={(id) => {
-                        if (!busy) setDialog({ type: "session", id });
-                      }}
-                      onEventClick={(id) =>
-                        !busy &&
-                        setDialog({
-                          type: "event",
-                          event: schedule.events.find(
-                            (event) => event.id === id,
-                          ),
-                        })
-                      }
-                    />
-                    <aside className="assignment-panel">
-                      {list}
-                      <div className="remaining-note">
-                        <Clock3 size={16} />
-                        <span>
-                          <strong>{hours(remaining)}</strong> of assignment work
-                          remaining
-                        </span>
-                      </div>
-                    </aside>
-                  </>
+                  <WeeklyCalendar
+                    events={schedule.events}
+                    tasks={schedule.tasks}
+                    studyBlocks={schedule.studyBlocks}
+                    onStudyClick={(id) => {
+                      if (!busy) setDialog({ type: "session", id });
+                    }}
+                    onEventClick={(id) =>
+                      !busy &&
+                      setDialog({
+                        type: "event",
+                        event: schedule.events.find(
+                          (event) => event.id === id,
+                        ),
+                      })
+                    }
+                  />
                 ) : (
-                  list
+                  <aside className="assignment-panel">
+                    {list}
+                    <div className="remaining-note">
+                      <Clock3 size={16} />
+                      <span>
+                        <strong>{hours(remaining)}</strong> of assignment work
+                        remaining
+                      </span>
+                    </div>
+                  </aside>
                 )}
               </div>
+              {section === "assignments" && (
+                <div className="stats-grid">
+                  <div className="stat">
+                    <span className="stat-icon purple">
+                      <BookOpen size={20} />
+                    </span>
+                    <div>
+                      <span>Active assignments</span>
+                      <strong>
+                        {
+                          schedule.tasks.filter(
+                            (task) => task.remainingTimeMinutes > 0,
+                          ).length
+                        }
+                        <small> to work on</small>
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-icon green">
+                      <Clock3 size={20} />
+                    </span>
+                    <div>
+                      <span>Planned study time</span>
+                      <strong>
+                        {hours(planned)}
+                        <small> on your calendar</small>
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-icon blue">
+                      <CheckCheck size={20} />
+                    </span>
+                    <div>
+                      <span>Completed sessions</span>
+                      <strong>
+                        {completed}
+                        <small> progress adds up</small>
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              )}
               <footer className="dashboard-footer">
-                <span>
-                  Built around your day.{" "}
-                  {schedule.preferences.sleepHours.wakeUpTime} wake-up ·{" "}
-                  {schedule.preferences.sleepHours.bedtime} bedtime
+                <span
+                  className={`source-badge ${mode === "backend" ? "real" : ""}`}
+                >
+                  {mode === "demo" ? (
+                    <FlaskConical size={15} />
+                  ) : (
+                    <Radio size={15} />
+                  )}
+                  {mode === "demo"
+                    ? "Mock data · demo workspace"
+                    : "Backend workspace"}
                 </span>
                 <button
                   className="health-button"

@@ -29,11 +29,16 @@ test("grade weight controls allocation, tied weights use deadline, and edits per
   await page.goto("/");
   await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
   const panel = page.getByRole("region", { name: "Not all work fits" });
+  await expect(panel.locator("summary")).toContainText("1 alert");
+  await expect(panel.locator("details")).not.toHaveAttribute("open", "");
+  await panel.locator("summary").click();
+  await expect(panel.locator("details")).toHaveAttribute("open", "");
   await expect(panel).toContainText("6h of work");
   await expect(panel).toContainText("current plan fits 4h");
   await expect(panel).toContainText("2h remains unscheduled");
   expect((await savedPlan(page)).warnings[0]).toMatchObject({ taskId: "math", unscheduledMinutes: 120 });
   async function editWeight(weight: string) {
+    await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
     await page.getByRole("button", { name: "Edit Math", exact: true }).click();
     await page.getByLabel("Grade weight (%)").fill(weight);
     await page.getByRole("button", { name: "Save assignment", exact: true }).click();
@@ -50,6 +55,7 @@ test("grade weight controls allocation, tied weights use deadline, and edits per
   const result = await generate();
   expect(result.unscheduled).toEqual([expect.objectContaining({ task_id: "essay", minutes: 120 })]);
   await page.reload();
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
   await expect(page.locator(".assignment").filter({ hasText: "Math" })).toContainText("80% of grade");
   expect((await savedPlan(page)).warnings[0].taskId).toBe("essay");
 
@@ -97,7 +103,7 @@ test("real Python planning, unfinished work, work-shift shortage, and persistenc
     }));
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Statistics assignment", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My Schedule", exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Test backend/ }).click();
   await expect(page.getByRole("button", { name: /Test backend/ })).toContainText("Connected");
   const initialResponse = page.waitForResponse(response => response.url().endsWith("/schedule") && response.request().method() === "POST");
@@ -135,6 +141,7 @@ test("real Python planning, unfinished work, work-shift shortage, and persistenc
   const shortage = await (await shortageResponse).json();
   expect(shortage.study_blocks).toHaveLength(2);
   expect(shortage.unscheduled[0].minutes).toBe(60);
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
   await expect(page.locator(".task-warning")).toContainText("1h still needs a time slot");
   await page.reload();
   await expect(page.locator(".unfinished-event")).toHaveCount(1);

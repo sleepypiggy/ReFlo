@@ -1,4 +1,5 @@
 import type { Schedule } from "@/datatypes";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 
 const time = (minutes: number) => {
   const wholeHours = Math.floor(minutes / 60);
@@ -19,9 +20,18 @@ export default function TimeShortagePanel({ schedule, demo }: {
     : null;
 
   return (
-    <section className="shortage-panel" aria-labelledby="shortage-heading">
-      <h2 id="shortage-heading">Not all work fits</h2>
-      <p role="status">
+    <section className="shortage-panel" aria-label="Not all work fits">
+      <details className="shortage-disclosure">
+        <summary className="shortage-summary">
+          <AlertTriangle size={30} aria-hidden="true" />
+          <span className="shortage-notice" role="status">
+            <strong>{schedule.warnings.length} {schedule.warnings.length === 1 ? "alert" : "alerts"}</strong>
+          </span>
+          <span className="shortage-details-label">View details</span>
+          <ChevronDown size={16} className="shortage-chevron" aria-hidden="true" />
+        </summary>
+        <div className="shortage-content">
+      <p>
         You have <strong>{time(required)} of work</strong>
         {deadline && <> due by {deadline.toLocaleDateString(undefined, {
           weekday: "short", month: "short", day: "numeric", year: "numeric",
@@ -44,6 +54,8 @@ export default function TimeShortagePanel({ schedule, demo }: {
         ))}
       </ul>
       {demo && <p className="muted small">Switch to Real Backend to schedule using grade weights and deadlines.</p>}
+        </div>
+      </details>
     </section>
   );
 }
