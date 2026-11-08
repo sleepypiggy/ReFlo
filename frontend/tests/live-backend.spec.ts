@@ -6,8 +6,10 @@ async function savedPlan(page: Page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend);
 }
 
-test("grade weight controls allocation, tied weights use deadline, and edits persist", async ({ page }) => {
-  await page.clock.setFixedTime(new Date("2026-11-13T08:00:00-08:00"));
+test("weighted pressure controls shortage, tied scores use deadline, and edits persist", async ({ page }) => {
+  // Stay before the first waking slot even if browser and Python timezone data
+  // differ by an hour; an already-started block becomes locked on regeneration.
+  await page.clock.setFixedTime(new Date("2026-11-13T07:00:00-08:00"));
   await page.addInitScript(() => {
     if (localStorage.getItem("schedule-maker:v1")) return;
     const schedule = {
@@ -53,7 +55,7 @@ test("grade weight controls allocation, tied weights use deadline, and edits per
   await expect(page.locator(".assignment").filter({ hasText: "Math" })).toContainText("80% of grade");
   expect((await savedPlan(page)).warnings[0].taskId).toBe("essay");
 
-  // Equal weights give the earlier-deadline Essay its full three hours.
+  // Equal weights and pressure give the earlier-deadline Essay its full three hours.
   await editWeight("40");
   const tied = await generate();
   expect(tied.unscheduled).toEqual([expect.objectContaining({ task_id: "math", minutes: 120 })]);

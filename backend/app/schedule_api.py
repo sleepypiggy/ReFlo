@@ -1,9 +1,10 @@
-"""Dashboard contract adapter sharing the existing single-assignment engine."""
+"""Deadline-aware dashboard allocation using the shared session engine."""
 
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Annotated, Literal
-from uuid import uuid4
+from fractions import Fraction
+from uuid import NAMESPACE_URL, uuid5
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter
@@ -197,9 +198,10 @@ def minutes_in_day(block: Window, start: datetime, end: datetime) -> float:
     return max(0, (min(block.end, end) - max(block.start, start)).total_seconds() / 60)
 
 
-@router.post("/schedule", response_model=ScheduleResponse)
-def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
-    """Allocate by higher grade weight, then earliest deadline and task ID.
+def _allocate(
+    request: ScheduleRequest, budgets: dict[str, int], availability: dict,
+) -> list[tuple[str, datetime, datetime]]:
+    """Pack minute budgets in deadline order, preserving all constraints.
 
     Return new sessions only. Locked history remains owned by the frontend.
     Historical entries never imply completed work. Future portions of still-
@@ -209,18 +211,15 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
     preferences = request.preferences
     now = ceil_minute(request.current_time)
     horizon = max([now] + [task.deadline for task in request.tasks])
-    fixed = event_windows(request, horizon)
+    if "fixed" not in availability:
+        availability["fixed"] = event_windows(request, horizon)
+    fixed = availability["fixed"]
     pause = timedelta(minutes=preferences.break_minutes)
     reservations = [Window(block.start, block.end) for block in request.locked_blocks]
     occupied = [Window(block.start - pause, block.end + pause) for block in reservations]
     output = []
-    warnings = []
-    used_ids = {block.id for block in request.locked_blocks}
-    for task in sorted(request.tasks, key=lambda item: (-item.grade_weight, item.deadline, item.id)):
-        reserved = sum(max(0, int((block.end - max(block.start, request.current_time)).total_seconds() // 60))
-                       for block in request.locked_blocks
-                       if block.task_id == task.id and block.status == "planned")
-        remaining = max(0, task.remaining_minutes - reserved)
+    for task in sorted(request.tasks, key=lambda item: (item.deadline, item.id)):
+        remaining = budgets.get(task.id, 0)
         day = now.astimezone(zone).date()
         last_day = task.deadline.astimezone(zone).date()
         while remaining and day <= last_day:
@@ -231,7 +230,10 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
                 # Calculate normal waking hours with the teammate's function.
                 # Overnight waking hours are split around local midnight.
                 wake, bed = preferences.wake_up_time, preferences.bedtime
-                if wake < bed:
+                key = (day_start, day_end)
+                if key in availability:
+                    windows = availability[key]
+                elif wake < bed:
                     local_windows = available_study_windows(
                         day_start.astimezone(zone), day_end.astimezone(zone), wake, bed, [],
                     )
@@ -240,7 +242,9 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
                     windows = [Window(day_start, min(day_end, wall(day, bed, zone))),
                                Window(max(day_start, wall(day, wake, zone)), day_end)]
                     windows = [item for item in windows if item.start < item.end]
-                windows = subtract(windows, fixed + occupied)
+                if key not in availability:
+                    availability[key] = subtract(windows, fixed)
+                windows = subtract(availability[key], occupied)
                 windows = [Window(ceil_minute(item.start), floor_minute(item.end)) for item in windows]
                 windows = [item for item in windows if item.start < item.end]
                 used = sum(minutes_in_day(item, midnight, next_midnight) for item in reservations)
@@ -250,17 +254,94 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
                     preferences.max_session_minutes, preferences.break_minutes,
                 )
                 for block in result.blocks:
-                    identifier = str(uuid4())
-                    while identifier in used_ids:
-                        identifier = str(uuid4())
-                    used_ids.add(identifier)
-                    output.append(ScheduledBlock(id=identifier, task_id=task.id, start=block.start, end=block.end))
+                    output.append((task.id, block.start, block.end))
                     reservation = Window(block.start, block.end)
                     reservations.append(reservation)
                     occupied.append(Window(block.start - pause, block.end + pause))
                     remaining -= int((block.end - block.start).total_seconds() // 60)
             day += timedelta(days=1)
-        if remaining:
-            warnings.append(Shortage(task_id=task.id, minutes=remaining,
-                                    reason="Not enough free study time before the deadline under your preferences."))
-    return ScheduleResponse(study_blocks=sorted(output, key=lambda block: (block.start, block.id)), unscheduled=warnings)
+    return output
+
+
+def _totals(blocks: list[tuple[str, datetime, datetime]]) -> dict[str, int]:
+    totals = {}
+    for task_id, start, end in blocks:
+        totals[task_id] = totals.get(task_id, 0) + int((end - start) // MINUTE)
+    return totals
+
+
+@router.post("/schedule", response_model=ScheduleResponse)
+def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
+    """Try all work in deadline order, then admit work by weighted pressure.
+
+    The session packer is a feasibility heuristic with nonzero breaks, not a
+    global optimizer. Admission preserves the budgets of higher-ranked tasks.
+    See frontend/API_CONTRACT.md for the policy and its guarantees and limits.
+    """
+    tasks = sorted(request.tasks, key=lambda task: (task.deadline, task.id))
+    demand = {}
+    for task in tasks:
+        reserved = sum(max(0, int((block.end - max(block.start, request.current_time)) // MINUTE))
+                       for block in request.locked_blocks
+                       if block.task_id == task.id and block.status == "planned")
+        demand[task.id] = max(0, task.remaining_minutes - reserved)
+
+    # Availability is immutable across trials; reservations are trial-local.
+    availability = {}
+    output = _allocate(request, demand, availability)
+    if _totals(output) != {key: value for key, value in demand.items() if value}:
+        # Measure standalone capacity under the same preferences and history.
+        # A bounded horizon means no task can use more than 367 days of minutes.
+        capacity = {}
+        capacity_by_deadline = {}
+        for task in tasks:
+            if not demand[task.id]:
+                continue
+            if task.deadline not in capacity_by_deadline:
+                capacity_by_deadline[task.deadline] = sum(
+                    _totals(_allocate(request, {task.id: 367 * 1440}, availability)).values()
+                )
+            capacity[task.id] = capacity_by_deadline[task.deadline]
+
+        def priority(task):
+            pressure = Fraction(demand[task.id], max(1, capacity[task.id]))
+            score = Fraction(str(task.grade_weight)) * pressure
+            return (-score, task.deadline, -pressure, task.id)
+
+        def fits(budgets):
+            return _totals(_allocate(request, budgets, availability)) == {key: value for key, value in budgets.items() if value}
+
+        admitted = {}
+        for task in sorted((task for task in tasks if demand[task.id]), key=priority):
+            if not capacity[task.id]:
+                continue
+            upper = min(demand[task.id], capacity[task.id])
+            if not fits({**admitted, task.id: upper}):
+                lower = 0
+                while lower < upper:
+                    middle = (lower + upper + 1) // 2
+                    if fits({**admitted, task.id: middle}):
+                        lower = middle
+                    else:
+                        upper = middle - 1
+                upper = lower
+            admitted[task.id] = upper
+        output = _allocate(request, admitted, availability)
+
+    used_ids = {block.id for block in request.locked_blocks}
+    result = []
+    for task_id, start, end in sorted(output, key=lambda block: (block[1], block[0], block[2])):
+        # Identical requests produce identical responses, including IDs.
+        name = f"{task_id}/{start.isoformat()}/{end.isoformat()}"
+        identifier = str(uuid5(NAMESPACE_URL, name))
+        suffix = 0
+        while identifier in used_ids:
+            suffix += 1
+            identifier = str(uuid5(NAMESPACE_URL, f"{name}/{suffix}"))
+        used_ids.add(identifier)
+        result.append(ScheduledBlock(id=identifier, task_id=task_id, start=start, end=end))
+    scheduled = _totals(output)
+    warnings = [Shortage(task_id=task.id, minutes=demand[task.id] - scheduled.get(task.id, 0),
+                        reason="Work could not be placed before the deadline under your preferences and priority policy.")
+                for task in tasks if demand[task.id] > scheduled.get(task.id, 0)]
+    return ScheduleResponse(study_blocks=result, unscheduled=warnings)

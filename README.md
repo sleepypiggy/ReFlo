@@ -46,6 +46,10 @@ Use **Real backend** as the data source and click **Generate Schedule**. It acce
 multiple tasks, fixed events, preferences, and locked history, then returns
 `study_blocks` and `unscheduled` as expected by the frontend. It handles recurring
 commitments, sleep, daily/session limits, breaks, and unfinished work.
+It tries all work in deadline order first. On shortage, priority combines grade
+weight with remaining effort relative to available study capacity before each
+deadline, while placing admitted work in deadline order. See the contract's
+[scheduling policy and tradeoffs](frontend/API_CONTRACT.md#implemented-scheduling-rules-and-limits).
 
 - [Dashboard JSON contract](frontend/API_CONTRACT.md)
 - [Example dashboard request](examples/schedule-request.json)
@@ -54,7 +58,7 @@ commitments, sleep, daily/session limits, breaks, and unfinished work.
 From the repository root, run the complete Python checks:
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability test_schedule
+.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability test_schedule test_priorities
 ```
 
 From `frontend`, run `npm.cmd test`, `npm.cmd run lint`, `npm.cmd run build`,

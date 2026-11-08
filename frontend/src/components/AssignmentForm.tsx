@@ -98,7 +98,7 @@ export default function AssignmentForm({
         </label>
       </div>
       <p className="muted small">
-        Higher grade weights get study time first. Equal weights use the closest deadline.
+        Shortage priority combines grade weight with remaining work relative to available time before the deadline.
       </p>
       {task && (
         <p className="muted small">
