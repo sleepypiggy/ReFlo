@@ -90,6 +90,8 @@ class PreferencesInput(InputModel):
 
     @model_validator(mode="after")
     def different_hours(self):
+        if self.wake_up_time < time(6):
+            raise ValueError("Wake-up time must be 06:00 or later")
         if self.wake_up_time == self.bedtime:
             raise ValueError("Wake-up and bedtime must differ")
         return self
@@ -233,7 +235,7 @@ def _allocate(
         while remaining and day <= last_day:
             midnight = wall(day, time.min, zone)
             next_midnight = wall(day + timedelta(days=1), time.min, zone)
-            day_start, day_end = max(now, midnight), min(task.deadline, next_midnight)
+            day_start, day_end = max(now, wall(day, time(6), zone)), min(task.deadline, next_midnight)
             if day_start < day_end:
                 # Compare instants in UTC: local datetime ordering ignores fold
                 # when both endpoints share a ZoneInfo at the fall-back hour.
@@ -306,7 +308,7 @@ def _space_dayparts(request: ScheduleRequest, blocks: list[tuple[str, datetime, 
     for day, original in sorted(grouped.items()):
         midnight = wall(day, time.min, zone)
         tomorrow = wall(day + timedelta(days=1), time.min, zone)
-        start, end = max(now, midnight), tomorrow
+        start, end = max(now, wall(day, time(6), zone)), tomorrow
         wake, bed = preferences.wake_up_time, preferences.bedtime
         if wake < bed:
             windows = [Window(max(start, wall(day, wake, zone)), min(end, wall(day, bed, zone)))]

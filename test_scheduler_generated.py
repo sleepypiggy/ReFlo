@@ -109,6 +109,7 @@ def verify(test, data, result):
         cursor = block.start
         while cursor < block.end:
             clock = cursor.astimezone(zone).time()
+            test.assertGreaterEqual(clock, time(6), f"Study before 06:00 at {cursor.isoformat()}")
             awake = wake <= clock < bed if wake < bed else clock >= wake or clock < bed
             test.assertTrue(awake, f"Asleep at {cursor.isoformat()} ({clock})")
             cursor += MINUTE
@@ -129,7 +130,7 @@ def verify(test, data, result):
                          task["remaining_minutes"], f"Minute accounting for {task['id']}")
 
 
-def generated(seed, count=24):
+def generated(seed, count=48):
     rng = random.Random(seed)
     scenarios = (
         ("UTC", "2026-11-10T00:00:00Z"),
@@ -144,7 +145,7 @@ def generated(seed, count=24):
         base = parse(start)
         now = base + timedelta(minutes=rng.choice((0, 30, 95, 180, 720)), seconds=rng.choice((0, 0, 31)))
         stamp = lambda minutes: (base + timedelta(minutes=minutes)).isoformat()
-        wake, bed = rng.choice((("00:00", "05:00"), ("08:00", "23:00"), ("20:00", "05:00")))
+        wake, bed = rng.choice((("06:00", "12:00"), ("08:00", "23:00"), ("20:00", "05:00")))
         tasks = [{"id": f"task-{task}", "title": f"Task {task}",
                   "estimated_minutes": rng.choice((15, 30, 90)),
                   "remaining_minutes": rng.choice((0, 8, 14, 15, 16, 31, 61, 105, 240)),
@@ -179,19 +180,18 @@ def generated(seed, count=24):
 
 
 class GeneratedSchedulerTests(unittest.TestCase):
-    def test_dst_elapsed_capacity_and_local_midnight_caps(self):
+    def test_early_dst_hours_and_local_midnight_cutoff(self):
         for zone, start, end, work, cap, expected in (
-            ("America/Vancouver", "2026-03-08T08:00:00Z", "2026-03-08T12:00:00Z", 300, 500, 240),
-            ("America/New_York", "2026-11-01T04:00:00Z", "2026-11-01T10:00:00Z", 400, 500, 360),
-            # 23:45 -> 01:00 in a non-hour offset zone; each local date gets
-            # its own 30-minute cap, despite both dates being the same UTC day.
-            ("Asia/Kathmandu", "2026-11-10T18:00:00Z", "2026-11-10T19:15:00Z", 60, 30, 45),
+            ("America/Vancouver", "2026-03-08T08:00:00Z", "2026-03-08T12:00:00Z", 300, 500, 0),
+            ("America/New_York", "2026-11-01T04:00:00Z", "2026-11-01T10:00:00Z", 400, 500, 0),
+            # Only 23:45 -> midnight is usable; the next day's early hours are excluded.
+            ("Asia/Kathmandu", "2026-11-10T18:00:00Z", "2026-11-10T19:15:00Z", 60, 30, 15),
         ):
             data = next(generated(SEEDS[0], 1))
             data.update(timezone=zone, current_time=start, events=[], locked_blocks=[])
             data["tasks"] = [{"id": "boundary", "title": "Boundary", "estimated_minutes": work,
                               "remaining_minutes": work, "deadline": end, "grade_weight": 20}]
-            data["preferences"].update(wake_up_time="00:00" if zone != "Asia/Kathmandu" else "20:00",
+            data["preferences"].update(wake_up_time="06:00" if zone != "Asia/Kathmandu" else "20:00",
                                        bedtime="05:00", max_daily_study_minutes=cap,
                                        max_session_minutes=60, break_minutes=0)
             with self.subTest(timezone=zone, start=start):
@@ -204,12 +204,12 @@ class GeneratedSchedulerTests(unittest.TestCase):
         data.update(timezone="America/New_York", current_time="2026-11-01T05:45:00Z", events=[], locked_blocks=[])
         data["tasks"] = [{"id": "fold", "title": "Repeated hour", "estimated_minutes": 30,
                           "remaining_minutes": 30, "deadline": "2026-11-01T06:30:00Z", "grade_weight": 20}]
-        data["preferences"].update(wake_up_time="00:00", bedtime="03:00", max_daily_study_minutes=60,
+        data["preferences"].update(wake_up_time="06:00", bedtime="03:00", max_daily_study_minutes=60,
                                    max_session_minutes=30, break_minutes=0)
         # 01:45 EDT -> 01:30 EST is 45 elapsed minutes, despite clock ordering.
         self.check_case(data)
         result = generate_schedule(ScheduleRequest.model_validate(data))
-        self.assertEqual(admitted(data, result), (30,))
+        self.assertEqual(admitted(data, result), (0,))
 
     def check_case(self, data):
         request = ScheduleRequest.model_validate(data)

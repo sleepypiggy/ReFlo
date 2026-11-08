@@ -85,6 +85,10 @@ and leave the saved plan unchanged. Demo mode keeps its authored shortage panel.
   An overnight recurring event ends the following local day.
   Optional `exclude_starts` lists UTC occurrence starts to omit from a weekly series.
   Moving one occurrence excludes its original start and adds a one-off commitment.
+- Wake-up time must be `06:00` or later. New study blocks and manual study moves
+  stay within 06:00–midnight in the local timezone, including with overnight waking
+  preferences. Earlier saved wake-up times are upgraded to 06:00 and flagged for
+  regeneration; existing history is retained.
 - `remaining_minutes` is authoritative and already reflects completed work. It can
   exceed the original estimate. Do not subtract historical sessions from it again.
 - `locked_blocks` includes every manually moved, completed, unfinished, explicitly locked, past,

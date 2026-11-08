@@ -1,5 +1,21 @@
 import { test, expect } from "@playwright/test";
 
+test("Preferences rejects wake-up before 6 a.m. and saves the boundary", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  const wake = page.getByLabel("Wake-up time", { exact: true });
+  await expect(wake).toHaveAttribute("min", "06:00");
+  await wake.fill("05:59");
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  expect(await wake.evaluate((input: HTMLInputElement) => input.validity.rangeUnderflow)).toBe(true);
+  await wake.fill("06:00");
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await expect(wake).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await expect(wake).toHaveValue("06:00");
+});
+
 test("Preferences rejects session maxima below 15 and saves the boundary", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Preferences", exact: true }).click();

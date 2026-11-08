@@ -71,11 +71,17 @@ function revive(value: Schedule): Schedule {
     throw new Error("Invalid study preferences");
   if (value.needsReplan !== undefined && typeof value.needsReplan !== "boolean")
     throw new Error("Invalid plan status");
+  const wakeUpTime = preferences.sleepHours.wakeUpTime < "06:00" ? "06:00" : preferences.sleepHours.wakeUpTime;
+  const bedtime = preferences.sleepHours.bedtime === wakeUpTime ? "00:00" : preferences.sleepHours.bedtime;
+  const earlyStudy = value.studyBlocks.some(block => block.status === "planned" &&
+    date(block.endTime) > new Date() && date(block.startTime).getHours() < 6);
   return {
     ...value,
     topics,
-    preferences: { ...preferences, maxSessionTimeMinutes: Math.max(15, preferences.maxSessionTimeMinutes) },
-    needsReplan: preferences.maxSessionTimeMinutes < 15 || (value.needsReplan ?? false),
+    preferences: { ...preferences, maxSessionTimeMinutes: Math.max(15, preferences.maxSessionTimeMinutes),
+      sleepHours: { bedtime, wakeUpTime } },
+    needsReplan: preferences.maxSessionTimeMinutes < 15 || wakeUpTime !== preferences.sleepHours.wakeUpTime ||
+      earlyStudy || (value.needsReplan ?? false),
     weekStart: date(value.weekStart),
     tasks: value.tasks.map((task) => {
       positive(task.estimatedTimeMinutes);

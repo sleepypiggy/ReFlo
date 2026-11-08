@@ -92,6 +92,28 @@ describe("plan accounting", () => {
 });
 
 describe("backup validation", () => {
+  it("upgrades early wake-up preferences without dropping data or invalidating the next reload", (context) => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+    context.after(() => {
+      if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
+      else Reflect.deleteProperty(globalThis, "localStorage");
+    });
+    for (const bedtime of ["23:00", "06:00"]) {
+      const workspace = initialWorkspace();
+      workspace.backend = schedule();
+      workspace.backend.preferences.sleepHours = { wakeUpTime: "05:59", bedtime };
+      let raw = JSON.stringify(workspace);
+      Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => raw } });
+      const restored = loadWorkspace();
+      assert.equal(restored.error, undefined);
+      assert.equal(restored.workspace.backend.preferences.sleepHours.wakeUpTime, "06:00");
+      assert.equal(restored.workspace.backend.needsReplan, true);
+      assert.deepEqual(restored.workspace.backend.tasks, workspace.backend.tasks);
+      raw = JSON.stringify(restored.workspace);
+      assert.equal(loadWorkspace().error, undefined);
+      assert.equal(importBackup(exportBackup(workspace)).backend.preferences.sleepHours.wakeUpTime, "06:00");
+    }
+  });
   it("normalizes old backup session limits without losing assignments or history", () => {
     for (const mode of ["backend", "demo"] as const) {
       for (const maximum of [1, 5, 14, 15]) {
