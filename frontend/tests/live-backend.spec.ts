@@ -58,14 +58,19 @@ test.describe("fixed event impact preview", () => {
     });
     const shift = { type: "event_draft", title: "Work shift",
       start: "2026-11-10T19:00:00Z", end: "2026-11-10T20:00:00Z" };
-    await page.route("**/assistant/parse", route => route.fulfill({ json: shift }));
+    await page.route("**/assistant/chat", route => route.fulfill({ json: {
+      status: "ready", message: "Review your event draft.", missing_fields: [],
+      draft: { id: "a0518ca3-2325-44c8-b32f-ec2badf6fbe6", started_at: 0, kind: "event",
+        title: shift.title, start: shift.start, end: shift.end, deadline: null,
+        estimated_minutes: null, grade_weight: null, sources: {} },
+    } }));
     await page.goto("/");
     await expect(page.locator(".study-event")).toHaveCount(1);
     const before = await savedPlan(page);
     const prepare = async () => {
       await page.getByLabel("Assistant message").fill("I have work from 7 to 8 tonight");
       const response = page.waitForResponse(r => r.url().endsWith("/schedule") && r.request().method() === "POST");
-      await page.getByRole("button", { name: "Preview schedule", exact: true }).click();
+      await page.getByRole("button", { name: "Send message", exact: true }).click();
       const result = await response;
       expect(result.status()).toBe(200);
       const request = result.request().postDataJSON();
@@ -393,10 +398,15 @@ test("real Python planning, unfinished work, work-shift shortage, and persistenc
     start: new Date("2026-11-12T18:15").toISOString(),
     end: new Date("2026-11-12T19:15").toISOString(),
   }));
-  await page.route("**/assistant/parse", route => route.fulfill({ json: shift }));
+  await page.route("**/assistant/chat", route => route.fulfill({ json: {
+    status: "ready", message: "Review your event draft.", missing_fields: [],
+    draft: { id: "d0918ca3-2325-44c8-b32f-ec2badf6fbe6", started_at: 0, kind: "event",
+      title: shift.title, start: shift.start, end: shift.end, deadline: null,
+      estimated_minutes: null, grade_weight: null, sources: {} },
+  } }));
   await page.getByLabel("Assistant message").fill("I work Thursday from 6:15 to 7:15 pm");
   const shortageResponse = page.waitForResponse(response => response.url().endsWith("/schedule") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Preview schedule", exact: true }).click();
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
   const shortage = await (await shortageResponse).json();
   expect(shortage.study_blocks).toHaveLength(2);
   expect(shortage.unscheduled[0].minutes).toBe(60);

@@ -415,10 +415,10 @@ export default function Dashboard() {
                   onApply={(next) => {
                     const at = new Date();
                     apply(next);
-                    setUndo({ mode, schedule: { ...schedule, events: next.events } });
+                    setUndo({ mode, schedule: { ...schedule, tasks: next.tasks, events: next.events, topics: next.topics } });
                     setReview({ mode, before: schedule, after: next, at });
                     setError("");
-                    setNotice("Commitment and revised study schedule applied.");
+                    setNotice("Changes applied and study schedule updated.");
                   }}
                 />
               )}

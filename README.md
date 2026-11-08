@@ -83,10 +83,11 @@ change-review panel and calendar highlights show the applied changes.
 
 ## API Integration
 
-The optional Gemini `POST /assistant/parse` endpoint is also integrated. See
-[assistant setup and draft contract](docs/ASSISTANT_API.md). Calendar scheduling
-works without a Gemini key; the assistant supports drafts, clarification,
-preview, Apply and Discard.
+The optional Gemini `POST /assistant/chat` endpoint powers a conversational
+assignment/event assistant with missing-field questions and an Apply/Cancel
+schedule preview. The legacy event-only `/assistant/parse` endpoint remains
+available. See [assistant setup and draft contract](docs/ASSISTANT_API.md).
+Calendar scheduling works without a Gemini key.
 
 ### Dashboard endpoint: `POST /schedule`
 
