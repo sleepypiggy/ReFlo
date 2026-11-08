@@ -210,6 +210,31 @@ class DashboardApiTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 400, response.text)
                 self.assertEqual(response.headers["access-control-allow-origin"], "http://localhost:3000")
 
+    def test_urgent_low_weight_task_is_not_starved_by_later_deadline(self):
+        self.payload["tasks"][0].update(grade_weight=90, remaining_minutes=120)
+        self.payload["tasks"].append({**self.payload["tasks"][0], "id": "urgent", "grade_weight": 5,
+                                      "deadline": "2026-11-10T12:00:00Z", "remaining_minutes": 120})
+        data = self.plan()
+        self.assertEqual(data["study_blocks"][0]["task_id"], "urgent")
+        self.assertEqual(data["unscheduled"], [])
+
+    def test_skipped_session_preserves_remaining_work(self):
+        self.payload["locked_blocks"] = [{"id": "skip", "task_id": "statistics", "start": "2026-11-10T09:00:00Z",
+                                           "end": "2026-11-10T10:00:00Z", "status": "skipped", "locked": True}]
+        data = self.plan()
+        self.assertEqual(minutes(data["study_blocks"]), 240)
+        self.assertEqual(data["unscheduled"], [])
+
+    def test_skipped_time_does_not_use_daily_study_budget(self):
+        self.payload["preferences"].update(bedtime="14:00")
+        self.payload["tasks"][0].update(remaining_minutes=120, deadline="2026-11-10T14:00:00Z")
+        self.payload["locked_blocks"] = [{"id": "skip", "task_id": "statistics", "start": "2026-11-10T09:00:00Z",
+                                           "end": "2026-11-10T10:00:00Z", "status": "skipped", "locked": True}]
+        data = self.plan()
+        self.assertEqual(minutes(data["study_blocks"]), 120)
+        self.assertEqual(data["study_blocks"][0]["start"], "2026-11-10T10:00:00Z")
+        self.assertEqual(data["unscheduled"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

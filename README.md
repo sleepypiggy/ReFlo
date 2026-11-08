@@ -37,7 +37,21 @@ Balancing work and social life is hard for students, and the transition from hav
 - [Edward Lau](https://github.com/lauedward82-cloud)
 - [Kevin Li](https://github.com/Kevin968k)
 
+## Current Planning Improvements
+
+The prototype uses feasibility-first scheduling with weighted deadline pressure, a saved
+plan-update indicator, replanning summaries with undo, and an **I Skipped** action.
+The dashboard separates remaining, upcoming and unscheduled time. JSON backup and
+restore work for both demo and real workspaces, with validation and confirmation.
+See [the frontend guide](frontend/README.md#planning-controls-and-backups) for details.
+Automated project checks are defined in `.github/workflows/checks.yml`.
+
 ## API Integration
+
+The optional Gemini `POST /assistant/parse` endpoint is also integrated. See
+[assistant setup and draft contract](docs/ASSISTANT_API.md). Calendar scheduling
+works without a Gemini key; assistant input and Apply/Cancel preview UI are not
+yet implemented.
 
 ### Dashboard endpoint: `POST /schedule`
 

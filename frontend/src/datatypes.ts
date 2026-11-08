@@ -79,6 +79,7 @@ export interface Schedule {
   studyBlocks: StudyBlock[];
   warnings: SchedulingWarning[];
   source: "demo" | "backend";
+  needsReplan?: boolean;
 }
 
 /** An independent session, never the assignment's overall start/end. */
@@ -87,7 +88,7 @@ export interface StudyBlock {
   taskId: string;
   startTime: Date;
   endTime: Date;
-  status: "planned" | "completed" | "unfinished";
+  status: "planned" | "completed" | "unfinished" | "skipped";
   locked?: boolean;
 }
 
