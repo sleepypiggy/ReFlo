@@ -7,14 +7,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc -p tsconfig.test.json && node --test .test-build/*.test.js"
+    "test": "tsc -p tsconfig.test.json && node --test .test-build/*.test.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@fullcalendar/react": "^7.1.4",
+    "lucide-react": "^1.70.0",
     "next": "16.4.5",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "temporal-polyfill": "^1.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

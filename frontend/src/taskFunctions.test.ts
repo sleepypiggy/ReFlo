@@ -19,8 +19,12 @@ function makeSchedule(tasks: Task[] = []): Schedule {
     weekStart: new Date("2026-11-09T00:00:00-08:00"),
     tasks,
     events: [],
+    studyBlocks: [],
+    warnings: [],
+    source: "demo",
     preferences: {
       maxStudyTimeMinutes: 240,
+      maxSessionTimeMinutes: 60,
       sleepHours: { bedtime: "23:00", wakeUpTime: "07:00" },
       breakDurationMinutes: 15,
     },
