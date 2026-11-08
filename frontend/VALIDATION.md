@@ -3,10 +3,10 @@
 Current integrated application checks:
 
 - Python API, availability and dashboard scheduling: **65 tests passed**.
-- Frontend calendar, task, plan-accounting and backup validation: **41 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **52 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **14 passed** in Microsoft Edge against the production build.
+- `npm run test:e2e`: **16 passed** in Microsoft Edge against the production build.
 - `npm run test:live`: **4 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
