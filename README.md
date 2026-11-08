@@ -77,6 +77,10 @@ See [the spacing contract](frontend/API_CONTRACT.md#study-spacing) for details.
 New study sessions have a 15-minute minimum. Session lengths can vary (for
 example, 60 + 45 minutes); small gaps are skipped rather than turned into tiny
 sessions. Any work that cannot fit under these limits is shown as unscheduled.
+The scheduler prefers durations in five-minute increments by redistributing a
+few minutes between new sessions of the same assignment (for example, 36 + 54
+becomes 35 + 55). Exact work totals are preserved. Odd durations remain when
+required by the estimate or scheduling constraints; locked history is unchanged.
 Preferences and `/schedule` require a session maximum of at least 15 minutes.
 Older saved preferences and backups with smaller positive limits are upgraded to
 15 and flagged for plan regeneration without losing workspace data. Assignments
