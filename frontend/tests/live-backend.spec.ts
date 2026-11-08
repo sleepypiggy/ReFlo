@@ -79,12 +79,12 @@ test.describe("fixed event impact preview", () => {
       expect(data.unscheduled).toEqual([expect.objectContaining({ task_id: "stats", minutes: 15 })]);
       const preview = page.getByRole("region", { name: "Revised schedule preview" });
       await expect(preview).toContainText("Work shift");
-      await expect(preview).toContainText("7:00 PM");
-      await expect(preview).toContainText("8:00 PM");
-      await expect(preview.getByRole("region", { name: "Removed study slots" })).toContainText("7:30 PM");
-      await expect(preview.getByRole("region", { name: "Removed study slots" })).toContainText("8:00 PM");
-      await expect(preview.getByRole("region", { name: "Added study slots" })).toContainText("8:00 PM");
-      await expect(preview.getByRole("region", { name: "Added study slots" })).toContainText("8:15 PM");
+      await expect(preview).toContainText(/7:00\s*p\.?m\.?/i);
+      await expect(preview).toContainText(/8:00\s*p\.?m\.?/i);
+      await expect(preview.getByRole("region", { name: "Removed study slots" })).toContainText(/7:30\s*p\.?m\.?/i);
+      await expect(preview.getByRole("region", { name: "Removed study slots" })).toContainText(/8:00\s*p\.?m\.?/i);
+      await expect(preview.getByRole("region", { name: "Added study slots" })).toContainText(/8:00\s*p\.?m\.?/i);
+      await expect(preview.getByRole("region", { name: "Added study slots" })).toContainText(/8:15\s*p\.?m\.?/i);
       await expect(preview.getByRole("region", { name: "Affected assignment totals" }))
         .toContainText("Statistics: 15 minutes scheduled; 15 minutes unscheduled before the deadline.");
       expect(await savedPlan(page)).toEqual(before);
@@ -99,6 +99,12 @@ test.describe("fixed event impact preview", () => {
     preview = await prepare();
     await preview.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(preview).toHaveCount(0);
+    const review = page.getByRole("region", { name: "Latest schedule changes" });
+    await expect(review).toContainText("1 moved, 0 added, 0 removed");
+    await expect(review).toContainText("15 minutes unscheduled");
+    await expect(review).toContainText("Previous:");
+    await expect(review).toContainText("Now:");
+    await expect(page.locator(".changed-study-event")).toHaveCount(1);
     await expect(page.locator(".fixed-event")).toHaveCount(1);
     await expect.poll(async () => (await savedPlan(page)).events.length).toBe(1);
     const applied = await savedPlan(page);

@@ -3,11 +3,11 @@
 Current integrated application checks:
 
 - Python API, availability and dashboard scheduling: **93 tests passed**.
-- Frontend calendar, task, topic, plan-accounting and backup validation: **65 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **70 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
 - `npm run test:e2e`: **19 passed** in Microsoft Edge against the production build.
-- `npm run test:live`: **6 passed** using separate browser and real FastAPI servers.
+- `npm run test:live`: **7 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
 
@@ -92,3 +92,18 @@ onto a future manually placed study session releases only the conflicting pin
 and replans automatically. Other pins and locked history remain intact. A browser
 regression verifies the outgoing reservations, fixed event time and revised study
 block; existing recurring occurrence movement and manual study placement tests pass.
+
+Schedule-change review shows previous/new slots, additions, removals and remaining
+shortages after real generation or assistant Apply. Calendar outlines and Updated
+labels mark changed blocks; dismissing clears highlights without removing undo.
+A browser regression checks mobile width, visual review, dismissal, and undo while
+retaining the saved event, task values and historical entries. Unit tests cover
+split blocks, regenerated IDs and separation between assignments.
+
+Integrated assistant impact previews share slot comparisons with the applied
+change review. Preview shows separate removed/added slots and affected assignment
+minutes without saving; Apply clears the stale-plan flag and then shows the
+review and calendar highlights. Live coverage includes a partial fit (15 minutes
+scheduled and 15 unscheduled), discard without changes, Apply and persistence.
+Next.js route type generation was also verified before the TypeScript check,
+matching the updated CI workflow.

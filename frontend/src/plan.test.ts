@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Task, type StudyBlock } from "./datatypes";
 import { initialWorkspace, exportBackup, importBackup } from "./lib/storage";
-import { hasStudyConflict, releaseConflictingPlacements, upcomingMinutes, planChanges } from "./lib/plan";
+import { hasStudyConflict, releaseConflictingPlacements, upcomingMinutes, planChangeDetails, planChanges } from "./lib/plan";
 
 const now = new Date("2026-11-10T10:00:00Z");
 const block = (id: string, start: string, end: string, status: StudyBlock["status"] = "planned"): StudyBlock =>
@@ -14,6 +14,24 @@ function schedule() {
 }
 
 describe("plan accounting", () => {
+  it("reviews split sessions without calling regenerated IDs changes or comparing different assignments", () => {
+    const before = schedule();
+    before.studyBlocks = [block("same", "2026-11-10T11:00:00Z", "2026-11-10T12:00:00Z"),
+      block("split", "2026-11-11T11:00:00Z", "2026-11-11T12:00:00Z")];
+    const after = { ...before, studyBlocks: [
+      { ...before.studyBlocks[0], id: "regenerated" },
+      block("first-half", "2026-11-11T13:00:00Z", "2026-11-11T13:30:00Z"),
+      block("second-half", "2026-11-12T13:00:00Z", "2026-11-12T13:30:00Z"),
+    ] };
+    const details = planChangeDetails(before, after, now);
+    assert.equal(details.length, 2);
+    assert.equal(details[0].before?.id, "split");
+    assert.equal(details[0].after?.id, "first-half");
+    assert.equal(details[1].before, undefined);
+    assert.deepEqual(planChanges(before, after, now), { moved: 1, added: 1, removed: 0 });
+    const differentTask = { ...before, studyBlocks: [{ ...before.studyBlocks[1], taskId: "other" }] };
+    assert.deepEqual(planChanges(before, differentTask, now), { moved: 0, added: 1, removed: 2 });
+  });
   it("releases only conflicting future manual placements when a fixed event wins", () => {
     const plan = schedule();
     plan.events = [{ id: "concert", name: "Concert", startTime: new Date("2026-11-10T11:00:00Z"),

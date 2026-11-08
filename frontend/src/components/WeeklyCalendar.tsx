@@ -22,6 +22,7 @@ export default function WeeklyCalendar({
   onEventClick,
   onMove,
   busy = false,
+  changedBlockIds,
 }: {
   events: Event[];
   studyBlocks: StudyBlock[];
@@ -31,6 +32,7 @@ export default function WeeklyCalendar({
   onEventClick: (id: string) => void;
   onMove: (move: CalendarMove) => boolean;
   busy?: boolean;
+  changedBlockIds?: string[];
 }) {
   const ref = useRef<CalendarRef>(null);
   const [title, setTitle] = useState("");
@@ -90,17 +92,18 @@ export default function WeeklyCalendar({
               ? "calendar-event skipped-event"
             : block.status === "unfinished"
               ? "calendar-event unfinished-event"
-              : `calendar-event study-event${color ? " topic-study" : ""}`,
+              : `calendar-event study-event${color ? " topic-study" : ""}${changedBlockIds?.includes(block.id) ? " changed-study-event" : ""}`,
         extendedProps: {
           type: "study",
           blockId: block.id,
           status: block.status,
           topicName: topic?.name,
+          changed: changedBlockIds?.includes(block.id),
         },
       };
       }),
     ],
-    [events, range, studyBlocks, tasks, topics],
+    [events, range, studyBlocks, tasks, topics, changedBlockIds],
   );
   return (
     <section className="calendar-card" aria-label="Study calendar">
@@ -215,6 +218,7 @@ export default function WeeklyCalendar({
             <div className="calendar-event-content">
               <div className="calendar-event-time">{info.timeText}</div>
               <div className="calendar-event-title">{info.event.title}</div>
+              {info.event.extendedProps.changed && <div className="calendar-change-label">Updated</div>}
               {info.event.extendedProps.topicName && <div className="calendar-event-topic">{info.event.extendedProps.topicName}</div>}
             </div>
           )}

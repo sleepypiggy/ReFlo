@@ -84,6 +84,14 @@
   --font-sans: var(--font-sen);
 }
 * { box-sizing: border-box; scrollbar-color: var(--hairline-strong) var(--surface-soft); }
+.plan-review { padding: 18px; margin-bottom: 20px; border: 1px solid var(--hairline-strong); border-radius: 14px; background: var(--surface-raised); min-width: 0; }
+.plan-review-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.plan-review-heading h2 { margin: 0; font-size: 18px; }
+.plan-review-list { list-style: none; padding: 0; max-height: 22rem; overflow: auto; }
+.plan-review-list li { display: grid; gap: 5px; padding: 12px 0; border-top: 1px solid var(--hairline); overflow-wrap: anywhere; }
+.plan-change-kind { color: var(--accent-blue); font-size: 12px; font-weight: 600; }
+.changed-study-event { outline: 2px solid var(--accent-blue); outline-offset: -2px; }
+.calendar-change-label { font-size: 10px; font-weight: 700; }
 body { margin: 0; background: var(--canvas); color: var(--ink); font-family: var(--font-sen), "Sen", sans-serif; font-size: 15px; line-height: 1.5; }
 button, input, select, textarea { font: inherit; }
 button, a, select { -webkit-tap-highlight-color: transparent; }

@@ -1,5 +1,6 @@
 import type { Schedule, StudyBlock } from "../datatypes";
-import { expandEvents, isPreserved } from "./calendar";
+import { expandEvents } from "./calendar";
+import { eventPreviewChanges } from "./eventPreview";
 
 /** Fixed commitments win over movable future study, including weekly repeats. */
 export function hasStudyConflict(schedule: Schedule, now = new Date()) {
@@ -21,17 +22,25 @@ export function upcomingMinutes(schedule: Schedule, now = new Date()) {
 }
 
 /** Ignore regenerated IDs: an unchanged task/time slot is still unchanged. */
-export function planChanges(before: Schedule, after: Schedule, now: Date) {
-  const future = (plan: Schedule) => plan.studyBlocks.filter(block => !isPreserved(block, now));
-  const key = (block: StudyBlock) => `${block.taskId}:${+block.startTime}:${+block.endTime}`;
-  const old = future(before), fresh = future(after);
-  const oldKeys = new Set(old.map(key)), newKeys = new Set(fresh.map(key));
-  const removed = old.filter(block => !newKeys.has(key(block)));
-  const added = fresh.filter(block => !oldKeys.has(key(block)));
+export function planChangeDetails(before: Schedule, after: Schedule, now: Date) {
+  const { removed, added } = eventPreviewChanges(before, after, now);
   const taskIds = new Set([...removed, ...added].map(block => block.taskId));
-  const moved = [...taskIds].reduce((sum, id) => sum + Math.min(
-    removed.filter(block => block.taskId === id).length,
-    added.filter(block => block.taskId === id).length,
-  ), 0);
-  return { moved, added: added.length - moved, removed: removed.length - moved };
+  const changes: { taskId: string; before?: StudyBlock; after?: StudyBlock }[] = [];
+  for (const taskId of taskIds) {
+    const oldBlocks = removed.filter(block => block.taskId === taskId).sort((a, b) => +a.startTime - +b.startTime);
+    const newBlocks = added.filter(block => block.taskId === taskId).sort((a, b) => +a.startTime - +b.startTime);
+    for (let index = 0; index < Math.max(oldBlocks.length, newBlocks.length); index++) {
+      changes.push({ taskId, before: oldBlocks[index], after: newBlocks[index] });
+    }
+  }
+  return changes;
+}
+
+export function planChanges(before: Schedule, after: Schedule, now: Date) {
+  const changes = planChangeDetails(before, after, now);
+  return {
+    moved: changes.filter(change => change.before && change.after).length,
+    added: changes.filter(change => !change.before).length,
+    removed: changes.filter(change => !change.after).length,
+  };
 }
