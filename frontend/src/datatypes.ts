@@ -6,7 +6,7 @@ export interface TaskInput {
   name: string;
   estimatedTimeMinutes: number;
   remainingTimeMinutes?: number;
-  /** Omit both times until the task is placed on the calendar. */
+  /** Legacy metadata only; independent StudyBlocks define the study schedule. */
   startTime?: Date;
   endTime?: Date;
   deadline: Date;
@@ -52,6 +52,7 @@ export interface Event {
 export interface Preferences {
   /** Maximum total study time per day. */
   maxStudyTimeMinutes: number;
+  maxSessionTimeMinutes: number;
   /** Local 24-hour clock times in HH:mm format; may span midnight. */
   sleepHours: {
     bedtime: string;
@@ -75,4 +76,25 @@ export interface Schedule {
   events: Event[];
   preferences: Preferences;
   skippedSessions?: SkippedSession[];
+  studyBlocks: StudyBlock[];
+  warnings: SchedulingWarning[];
+  source: "demo" | "backend";
 }
+
+/** An independent session, never the assignment's overall start/end. */
+export interface StudyBlock {
+  id: string;
+  taskId: string;
+  startTime: Date;
+  endTime: Date;
+  status: "planned" | "completed" | "unfinished";
+  locked?: boolean;
+}
+
+export interface SchedulingWarning {
+  taskId: string;
+  unscheduledMinutes: number;
+  reason: string;
+}
+
+export type AppMode = "demo" | "backend";
