@@ -1,6 +1,7 @@
 import type { Schedule } from "@/datatypes";
 import { fromScheduleResponse, toScheduleRequest } from "./apiAdapter";
 import { formatApiError } from "./apiErrors";
+import { validateChatResponse, type AssistantDraft, type ChatMessage } from "./assistantChat";
 
 export const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -10,7 +11,7 @@ async function request(path: string, init?: RequestInit) {
   try {
     const response = await fetch(`${API_URL}${path}`, {
       ...init,
-      signal: AbortSignal.timeout(path === "/assistant/parse" ? 40000 : 15000),
+      signal: AbortSignal.timeout(path.startsWith("/assistant/") ? 40000 : 15000),
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
     if (!response.ok) {
@@ -47,6 +48,18 @@ export async function generateSchedule(schedule: Schedule, now = new Date()) {
     body: JSON.stringify(toScheduleRequest(schedule, now)),
   });
   return fromScheduleResponse(data, schedule, now);
+}
+
+export async function chatAssistant(messages: ChatMessage[], draft: AssistantDraft | null, now = new Date()) {
+  const data = await request("/assistant/chat", {
+    method: "POST",
+    body: JSON.stringify({ messages, draft, current_time: now.toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+  });
+  const response = validateChatResponse(data, now);
+  if (draft && response.draft && response.draft.id !== draft.id)
+    throw new Error("Invalid assistant response: the pending draft changed identity. Your existing schedule is preserved.");
+  return response;
 }
 
 export type AssistantResult =

@@ -2,11 +2,11 @@
 
 Current integrated application checks:
 
-- Python API, availability and dashboard scheduling: **93 tests passed**.
-- Frontend calendar, task, topic, plan-accounting and backup validation: **71 tests passed**.
+- Python API, availability and dashboard scheduling: **116 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **86 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **21 passed** in Microsoft Edge against the production build.
+- `npm run test:e2e`: **24 passed** in Microsoft Edge against the production build.
 - `npm run test:live`: **7 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
@@ -134,3 +134,33 @@ Topic rows have an explicit line height and appear only when the whole line fits
 The regression covers a 75-minute event at the intermediate height, a taller
 event, and a shorter assignment with the complete topic retained in its tooltip.
 Update text yields to the topic row and uses its inline icon in smaller blocks.
+
+## Goal 1 + Goal 2 branch integration (2026-11-08)
+
+Synced the conversational assignment/event draft work with `main` at `30a3511`.
+The resolved assistant panel retains persistent chat, missing-field questions,
+validated drafts, stale/duplicate protections, and Goal 2's separate removed/added
+study slots and affected-assignment totals. Both creation kinds use the shared
+impact preview; new assignment names resolve against the candidate plan. Undoing
+an assistant replan retains newly created assignments as well as fixed events.
+
+Verified locally after resolving the merge:
+
+- 83 frontend unit tests; lint; generated Next.js types; TypeScript check.
+- 110 Python tests and all three `demo_week.py` scheduling scenarios.
+- Production build using the ignored `.next-live-tests` output directory.
+- 20 browser regression cases against that production build in Chrome.
+- 7 live-backend browser cases, including fixed-event displacement/partial fit,
+  preview-only changes before Apply, discard, persistence, and plan review.
+
+The chat browser cases stub assistant responses. Backend chat tests mock Gemini
+extraction while exercising the real route and scheduler. Live Gemini model
+responses have not been verified. No credentials were used by these tests.
+
+Merged Goal 1 with `main` at `79533ff`, retaining the drag-lock explanations.
+Validation of the combined tree passed: 114 backend tests, three scheduling
+scenarios, 84 frontend unit tests, lint, generated route types, TypeScript,
+production build, 21 browser regression cases, and seven live-backend cases.
+Separate teammate testing in Real backend mode confirmed clarification for
+missing study time and grade weight, preservation of the 10 PM deadline, and
+saving 30 minutes and 10% after Apply without the one-hour offset.

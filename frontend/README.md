@@ -16,13 +16,21 @@ commitments to edit/delete; click study sessions to complete or report unfinishe
 work. Assignment deletion also removes its sessions after a confirmation. Updating
 inputs does not automatically regenerate the plan; use Generate Schedule.
 
-In **Real backend**, use **Schedule assistant** to describe a fixed commitment.
-It calls `POST /assistant/parse` with the current time and browser timezone. If
-details are missing, answer the displayed question; the original request is kept
-as context. An event draft is sent with your existing tasks, commitments,
-preferences, and locked history to `POST /schedule`. Review the revised sessions
-and shortage warnings, then click **Apply** to save the commitment and revised
-plan together. **Discard preview**, refresh, or later edits leave the draft unsaved.
+In **Real backend**, use **Schedule assistant** to create an assignment or a single
+fixed event through chat. `POST /assistant/chat` receives role-based history, the
+pending draft, the current time, and browser timezone. The backend asks for all
+missing/invalid fields together; an assignment always needs a name, deadline date
+and time, positive work estimate, and an explicit grade weight (0–100%). No weight
+is assumed. Replies update the same draft, including corrections.
+
+Conversation and draft fields persist separately in browser storage. Schedule
+previews never persist. Complete drafts call `/schedule` with the existing tasks,
+commitments, preferences, and protected history. Review the revised sessions and
+shortages, then click **Apply** to save the item and revised plan together.
+**Cancel draft**, **Start over**, and **Discard preview** do not change the calendar.
+Intervening edits invalidate the preview. Refresh restores the conversation but
+requires a fresh preview before Apply. **Retry message** retries a failed model
+request; **Preview changes** retries scheduling without asking the model again.
 The assistant requires `GEMINI_API_KEY` in `backend/.env` (see
 `backend/.env.example`); demo mode remains independent of the assistant.
 
@@ -113,6 +121,11 @@ files, downloads and re-importing exported instants. `npm run test:live -- --gre
 
 ## Planning controls and backups
 
+- Maximum session length must be at least 15 minutes, matching `/schedule`.
+  Smaller remaining work stays valid and is shown as unscheduled with an
+  explanation; estimates are never rounded up. Older saved workspaces and JSON
+  backups with smaller positive session limits are normalized to 15 without
+  losing data, and affected plans are marked for regeneration.
 - Scheduling first tries to fit all work in deadline order. If it cannot, the
   teammate's policy ranks work by grade weight multiplied by remaining work
   relative to available study capacity. There is no manual priority override.
@@ -141,9 +154,9 @@ for month/week/day views. The sidebar theme toggle supports light/dark modes and
 remembers the selection separately from schedule data. Backup controls remain in
 the footer in both themes and on mobile.
 
-The backend now includes `/assistant/parse`, but an assistant input and a proposed
-schedule preview with Apply/Cancel are not yet part of this dashboard. See
-[assistant setup](../docs/ASSISTANT_API.md).
+The dashboard includes conversational assignment/event drafts and an Apply/Cancel
+preview. `/assistant/parse` remains available for older event-only clients. See
+[assistant setup and chat contract](../docs/ASSISTANT_API.md).
 
 ## Spread assignment work
 

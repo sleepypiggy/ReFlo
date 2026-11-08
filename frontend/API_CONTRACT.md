@@ -233,8 +233,17 @@ length: 105 minutes can become 60 + 45, and 68 minutes can become 53 + 15.
 Small gaps are skipped and daily balancing may use uneven blocks to avoid tiny
 remainders. Fixed events, breaks, deadlines and maximum study limits still apply.
 Minutes that cannot fit in a valid block remain in `unscheduled`; work is never
-rounded up. This includes assignments with fewer than 15 minutes remaining or a
-configured session maximum below 15 minutes. Existing locked history is preserved.
+rounded up. Assignments with fewer than 15 minutes remaining are valid and receive
+a specific explanation that their unscheduled work is below the block minimum.
+Existing locked history is preserved.
+
+`preferences.max_session_minutes` must be an integer from 15 through 1440.
+Values below 15 return HTTP 400 with a field-level detail at
+`body.preferences.max_session_minutes`. Preferences enforces the same minimum
+and explains why. Loading saved workspaces or importing version 1 backups with
+older positive session limits below 15 normalizes those limits to 15 and marks
+the affected plan `needsReplan`, preserving assignments, estimates and history.
+Backup imports continue to mark both plans as needing regeneration.
 The legacy single-assignment `/api/plan` prototype retains its original behavior.
 
 `preferences.spread_assignments` is optional and defaults to `true`. The frontend
