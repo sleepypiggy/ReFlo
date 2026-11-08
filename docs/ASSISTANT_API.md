@@ -115,6 +115,16 @@ before reporting readiness. Structured output and evidence checks reduce invente
 fields; they cannot guarantee flawless natural-language interpretation. The user
 must review the resulting draft and plan before Apply.
 
+For chat date fields (`deadline`, `start`, `end`), Gemini returns local wall time
+as `YYYY-MM-DDTHH:MM:SS`, without an offset or `Z`. Python resolves it using the
+request's IANA timezone and the shared `resolve_wall_time` helper used by
+`/assistant/parse`. Invalid, ambiguous, or nonexistent local times require further
+input; model-supplied offsets are rejected. Public drafts still contain explicit
+offsets, so frontend and scheduler contracts are unchanged. On follow-up turns,
+the model receives draft dates converted back to local wall time; unchanged public
+draft fields retain their resolved instant. Timezone offsets follow the installed
+timezone database rather than a hardcoded standard/daylight offset.
+
 The endpoint never schedules or writes anything. On readiness, the frontend builds
 an unsaved candidate with stable item ID `assistant-<draft UUID>` and calls
 `/schedule`. Only Apply commits both item and successful scheduling result. Fixed

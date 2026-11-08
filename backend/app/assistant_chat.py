@@ -12,7 +12,7 @@ from google import genai
 from pydantic import Field, StrictInt, ValidationError, model_validator
 
 from .api import InputModel, timezone_name
-from .assistant_api import AssistantSettings, Instant, offset_timestamp
+from .assistant_api import AssistantSettings, Instant, local_timestamp, offset_timestamp, resolve_wall_time
 from .schedule_api import TaskInput as SchedulingTask, EventInput as SchedulingEvent
 from pydantic import BeforeValidator
 
@@ -62,7 +62,7 @@ class ChatRequest(InputModel):
 
 class Update(InputModel):
     field: FieldName
-    value: str | None
+    value: str | None = Field(description="For deadline/start/end: local YYYY-MM-DDTHH:MM:SS without an offset or Z. Other fields: text or numeric strings. Null clears a field.")
     source_message: Annotated[StrictInt, Field(ge=0)]
     evidence: Annotated[str, Field(min_length=1, max_length=10000)]
 
@@ -89,8 +89,10 @@ Event fields: title, start, end. Never invent a missing value, default grade wei
 estimate, date, or hour. A supplied 0% is valid; an omitted weight is unknown.
 For each update, quote EXACT user text as evidence and its zero-based message index.
 Never cite assistant text as user evidence. Numeric values are strings in your output;
-convert study durations to whole minutes. Dates are ISO timestamps with explicit offsets,
-resolved from the user's dates using current_time and timezone (including DST).
+convert study durations to whole minutes. For deadline, start, and end updates, return
+local wall-clock dates and times as YYYY-MM-DDTHH:MM:SS WITHOUT UTC offsets or Z.
+Resolve relative dates using current_time and timezone, but never calculate offsets:
+Python will resolve each local date/time in the requested IANA timezone (including DST).
 If a deadline time or date is ambiguous, ask for clarification rather than guessing.
 A clock-only follow-up may use a date supplied in this same pending draft's conversation.
 For title, use a title actually present in user text. Retain already-supplied fields.
@@ -218,6 +220,13 @@ def process_extraction(request: ChatRequest, result: Extraction) -> ChatResponse
                 value = value.strip() if value.strip().casefold() in update.evidence.casefold() else None
             elif not CLOCK_WORD.search(update.evidence) or not DATE_WORD.search(user_text):
                 value = None
+            else:
+                # Gemini supplies wall time only. Resolve the offset for the actual
+                # date, rather than trusting a model's DST/UTC-offset calculation.
+                try:
+                    value = resolve_wall_time(local_timestamp(value), ZoneInfo(request.timezone)).isoformat()
+                except (ValueError, TypeError, OverflowError):
+                    value = None
         setattr(draft, update.field, value)
         draft.sources[update.field] = index
     issues = draft_issues(draft, request)
@@ -247,13 +256,20 @@ def chat(request: ChatRequest) -> ChatResponse:
     key = AssistantSettings().gemini_api_key
     if key is None or not key.get_secret_value().strip():
         raise HTTPException(status_code=503, detail="Assistant unavailable: GEMINI_API_KEY is not configured.")
+    # Keep the public draft offset-aware, while presenting local wall times to
+    # Gemini consistently on every turn (including duration/weight follow-ups).
+    model_draft = request.draft.model_dump(mode="json") if request.draft else None
+    if model_draft:
+        for field in ("deadline", "start", "end"):
+            instant = valid_instant(model_draft[field], request)
+            model_draft[field] = instant.astimezone(ZoneInfo(request.timezone)).strftime("%Y-%m-%dT%H:%M:%S") if instant else None
     try:
         with genai.Client(api_key=key.get_secret_value(), http_options={"timeout": 30000, "retry_options": {"attempts": 1}}) as client:
             response = client.models.generate_content(
                 model=MODEL,
                 contents=json.dumps({
                     "messages": [message.model_dump() for message in request.messages],
-                    "draft": request.draft.model_dump(mode="json") if request.draft else None,
+                    "draft": model_draft,
                     "current_time": request.current_time.astimezone(ZoneInfo(request.timezone)).isoformat(),
                     "timezone": request.timezone,
                 }),

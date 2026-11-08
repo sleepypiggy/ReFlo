@@ -19,7 +19,7 @@ def update(field, value, evidence, index=0):
 
 def assignment_updates():
     return [update("title", "Integration worksheet", "Integration worksheet"),
-            update("deadline", "2026-11-10T17:00:00-08:00", "Tuesday at 5pm"),
+            update("deadline", "2026-11-10T17:00:00", "Tuesday at 5pm"),
             update("estimated_minutes", "120", "two hours")]
 
 
@@ -67,6 +67,49 @@ class AssistantChatTests(unittest.TestCase):
         self.assertEqual(result["missing_fields"], ["deadline", "estimated_minutes", "grade_weight"])
         for phrase in ("deadline date and time", "study time in minutes", "grade weight"):
             self.assertIn(phrase, result["message"])
+
+    def test_math_team_deadline_stays_at_10pm_after_duration_and_weight_follow_up(self):
+        self.payload["messages"][0]["content"] = "Add a Math team assignment due November 10, 2026 at 10 PM."
+        # Resolve the requested wall time using installed Vancouver timezone rules.
+        self.payload["current_time"] = "2026-10-31T12:00:00-07:00"
+        first = self.reply([update("title", "Math team", "Math team"),
+            update("deadline", "2026-11-10T22:00:00", "November 10, 2026 at 10 PM")])
+        self.assertEqual(first["missing_fields"], ["estimated_minutes", "grade_weight"])
+        expected = datetime(2026, 11, 10, 22, tzinfo=ZoneInfo("America/Vancouver")).isoformat()
+        self.assertEqual(first["draft"]["deadline"], expected)
+        self.follow_up(first, "30 minutes, worth 10%.")
+        second = self.reply([update("estimated_minutes", "30", "30 minutes", 2),
+                             update("grade_weight", "10", "worth 10%", 2)])
+        self.assertEqual(second["status"], "ready")
+        self.assertEqual(second["draft"]["id"], first["draft"]["id"])
+        self.assertEqual(second["draft"]["deadline"], first["draft"]["deadline"])
+        self.assertEqual(second["draft"]["estimated_minutes"], 30)
+        self.assertEqual(second["draft"]["grade_weight"], 10)
+        deadline = datetime.fromisoformat(second["draft"]["deadline"]).astimezone(ZoneInfo("America/Vancouver"))
+        self.assertEqual((deadline.year, deadline.month, deadline.day, deadline.hour), (2026, 11, 10, 22))
+        # The follow-up model context uses local wall time, while public drafts
+        # remain offset-aware. Re-emitting that unchanged deadline is safe too.
+        sent = json.loads(self.gemini.models.generate_content.call_args.kwargs["contents"])
+        self.assertEqual(sent["draft"]["deadline"], "2026-11-10T22:00:00")
+        repeated = self.reply([update("deadline", sent["draft"]["deadline"], "November 10, 2026 at 10 PM")])
+        self.assertEqual(repeated["draft"]["deadline"], first["draft"]["deadline"])
+
+    def test_date_specific_offsets_and_dst_gaps_and_folds(self):
+        # Use a zone that still observes seasonal clock changes. Vancouver
+        # timezone rules changed in 2026; do not assume it shares US offsets.
+        self.payload["timezone"] = "America/Los_Angeles"
+        for local, expected in [
+            ("2026-11-10T22:00:00", "2026-11-10T22:00:00-08:00"),
+            ("2027-07-10T22:00:00", "2027-07-10T22:00:00-07:00"),
+            ("2027-03-14T02:30:00", None),  # spring gap
+            ("2026-11-01T01:30:00", None),  # fall fold
+        ]:
+            with self.subTest(local=local):
+                self.payload["current_time"] = "2026-10-31T12:00:00-07:00"
+                self.payload["messages"][0]["content"] = f"Add Math due {local[:10]} at {local[11:16]}"
+                result = self.reply([update("title", "Math", "Math"), update("deadline", local, self.payload["messages"][0]["content"])])
+                self.assertEqual(result["draft"]["deadline"], expected)
+                self.assertEqual("deadline" in result["missing_fields"], expected is None)
 
     def test_invented_weight_and_duration_without_source_units_are_not_accepted(self):
         for evidence, value in [("Tuesday at 5pm", "5"), ("two hours", "2"), ("not in user text", "10")]:
@@ -127,11 +170,11 @@ class AssistantChatTests(unittest.TestCase):
         self.payload["messages"][0]["content"] = "Add Integration worksheet due Tuesday; two hours; 15%"
         first = self.reply([assignment_updates()[0], assignment_updates()[2], update("grade_weight", "15", "15%")])
         self.follow_up(first, "5pm")
-        second = self.reply([update("deadline", "2026-11-10T17:00:00-08:00", "5pm", 2)])
+        second = self.reply([update("deadline", "2026-11-10T17:00:00", "5pm", 2)])
         self.assertEqual(second["status"], "ready")
 
     def test_invalid_calendar_date_and_out_of_horizon_are_not_ready(self):
-        for timestamp in ["2026-02-30T17:00:00-08:00", "2026-11-10T17:00:00", "2028-11-10T17:00:00-08:00"]:
+        for timestamp in ["2026-02-30T17:00:00", "2026-11-10T17:00:00-07:00", "2026-11-10T17:00:00Z", "2028-11-10T17:00:00"]:
             updates = assignment_updates()
             updates[1]["value"] = timestamp
             result = self.reply(updates)
@@ -139,12 +182,12 @@ class AssistantChatTests(unittest.TestCase):
 
     def test_event_flow_and_reversed_times(self):
         self.payload["messages"][0]["content"] = "Work on Tuesday from 7pm to 8pm"
-        updates = [update("title", "Work", "Work"), update("start", "2026-11-10T19:00:00-08:00", "7pm"),
-                   update("end", "2026-11-10T20:00:00-08:00", "8pm")]
+        updates = [update("title", "Work", "Work"), update("start", "2026-11-10T19:00:00", "7pm"),
+                   update("end", "2026-11-10T20:00:00", "8pm")]
         result = self.reply(updates, "create_event")
         self.assertEqual(result["status"], "ready")
         self.assertEqual(result["draft"]["kind"], "event")
-        updates[2]["value"] = "2026-11-10T18:00:00-08:00"
+        updates[2]["value"] = "2026-11-10T18:00:00"
         result = self.reply(updates, "create_event")
         self.assertIn("end", result["missing_fields"])
 
@@ -181,8 +224,8 @@ class AssistantChatTests(unittest.TestCase):
         self.payload.update(current_time="2026-11-10T19:00:00Z", timezone="UTC")
         self.payload["messages"][0]["content"] = "Work on Tuesday from 7pm to 8pm"
         result = self.reply([update("title", "Work", "Work"),
-            update("start", "2026-11-10T19:00:00Z", "7pm"),
-            update("end", "2026-11-10T20:00:00Z", "8pm")], "create_event")
+            update("start", "2026-11-10T19:00:00", "7pm"),
+            update("end", "2026-11-10T20:00:00", "8pm")], "create_event")
         self.assertEqual(result["status"], "ready")
         draft = result["draft"]
         candidate = {
