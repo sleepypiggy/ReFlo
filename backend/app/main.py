@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from .api import router
+from .assistant_api import router as assistant_router
 from .config import Settings
 from .schedule_api import router as schedule_router
 
@@ -31,7 +32,7 @@ async def http_error(request: Request, error: HTTPException):
 
 @app.middleware("http")
 async def validate_plan_body(request: Request, call_next):
-    if request.method == "POST" and request.url.path in ("/api/plan", "/schedule"):
+    if request.method == "POST" and request.url.path in ("/api/plan", "/schedule", "/assistant/parse"):
         if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
             return JSONResponse(status_code=415, content={"error": "Content-Type must be application/json"})
         body = await request.body()
@@ -42,6 +43,7 @@ async def validate_plan_body(request: Request, call_next):
 
 app.include_router(router)
 app.include_router(schedule_router)
+app.include_router(assistant_router)
 
 # Register last so browser CORS headers also cover early validation responses.
 app.add_middleware(
