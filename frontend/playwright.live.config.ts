@@ -27,7 +27,7 @@ export default defineConfig({
     },
     {
       command: "npm run dev -- --port 3101",
-      env: { NEXT_PUBLIC_API_URL: "http://127.0.0.1:8100" },
+      env: { NEXT_PUBLIC_API_URL: "http://127.0.0.1:8100", NEXT_DIST_DIR: ".next-live-tests" },
       url: "http://127.0.0.1:3101",
       timeout: 90000,
     },

@@ -20,6 +20,7 @@
 
 # next.js
 /.next/
+/.next-live-tests/
 /out/
 
 # production

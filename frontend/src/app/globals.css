@@ -1,4 +1,15 @@
 ﻿@import "tailwindcss";
+.shortage-panel {
+  background: #fff9ed;
+  border: 1px solid #e8c992;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  color: #624116;
+}
+.shortage-panel h2 { font-size: 18px; margin-bottom: 10px; }
+.shortage-panel p { margin-bottom: 12px; }
+.shortage-breakdown { padding-left: 20px; margin: 12px 0 18px; }
 :root {
   --background: #f7f8fa;
   --foreground: #242b36;

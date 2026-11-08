@@ -31,6 +31,7 @@ import Modal from "./Modal";
 import PreferencesPanel from "./PreferencesPanel";
 import StudySessionModal from "./StudySessionModal";
 import WeeklyCalendar from "./WeeklyCalendar";
+import TimeShortagePanel from "./TimeShortagePanel";
 
 type Dialog =
   | { type: "assignment"; task?: Task }
@@ -133,12 +134,12 @@ export default function Dashboard() {
       tasks: schedule.tasks.map((task) =>
         task.id === block.taskId
           ? {
-              ...task,
-              remainingTimeMinutes: Math.max(
-                0,
-                task.remainingTimeMinutes - duration(block),
-              ),
-            }
+            ...task,
+            remainingTimeMinutes: Math.max(
+              0,
+              task.remainingTimeMinutes - duration(block),
+            ),
+          }
           : task,
       ),
     });
@@ -406,32 +407,10 @@ export default function Dashboard() {
                 </div>
               )}
               {schedule.warnings.length > 0 && (
-                <details className="conflicts">
-                  <summary>
-                    <AlertTriangle size={16} />
-                    {hours(
-                      schedule.warnings.reduce(
-                        (sum, warning) => sum + warning.unscheduledMinutes,
-                        0,
-                      ),
-                    )}{" "}
-                    of work still needs a time slot
-                  </summary>
-                  <ul>
-                    {schedule.warnings.map((warning, i) => (
-                      <li key={`${warning.taskId}-${i}`}>
-                        <strong>
-                          {
-                            schedule.tasks.find(
-                              (task) => task.id === warning.taskId,
-                            )?.name
-                          }
-                        </strong>
-                        : {hours(warning.unscheduledMinutes)} — {warning.reason}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
+                <TimeShortagePanel
+                  schedule={schedule}
+                  demo={mode === "demo"}
+                />
               )}
               <div
                 className={
@@ -533,8 +512,8 @@ export default function Dashboard() {
                   ...schedule,
                   tasks: schedule.tasks.some((item) => item.id === task.id)
                     ? schedule.tasks.map((item) =>
-                        item.id === task.id ? task : item,
-                      )
+                      item.id === task.id ? task : item,
+                    )
                     : [...schedule.tasks, task],
                   warnings: schedule.warnings.filter(
                     (warning) => warning.taskId !== task.id,
@@ -552,8 +531,8 @@ export default function Dashboard() {
                     ...schedule,
                     events: schedule.events.some((item) => item.id === event.id)
                       ? schedule.events.map((item) =>
-                          item.id === event.id ? event : item,
-                        )
+                        item.id === event.id ? event : item,
+                      )
                       : [...schedule.events, event],
                   })
                 }
