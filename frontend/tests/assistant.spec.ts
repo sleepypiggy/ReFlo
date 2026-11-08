@@ -47,7 +47,7 @@ test("clarification retains context; preview stays unsaved until Apply and persi
   });
   await page.getByLabel("Assistant message").fill("I'm working tonight");
   await page.getByRole("button", { name: "Preview schedule", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("What time does your shift start and end?");
+  await expect(page.getByRole("status").filter({ hasText: "What time does your shift start and end?" })).toHaveText("What time does your shift start and end?");
   expect(schedules).toBe(0);
   await page.getByLabel("Your answer").fill("7 to 8 pm");
   await page.getByRole("button", { name: "Preview schedule", exact: true }).click();

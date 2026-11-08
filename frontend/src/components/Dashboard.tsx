@@ -20,7 +20,8 @@ import type { AppMode, Event, Schedule, Task } from "@/datatypes";
 import { checkHealth, generateSchedule } from "@/lib/api";
 import { duration, hours } from "@/lib/calendar";
 import { demoResult } from "@/lib/mockData";
-import { loadWorkspace, saveWorkspace, type Workspace } from "@/lib/storage";
+import { loadWorkspace, saveWorkspace, exportBackup, importBackup, type Workspace } from "@/lib/storage";
+import { planChanges, upcomingMinutes } from "@/lib/plan";
 import AssignmentForm from "./AssignmentForm";
 import AssignmentList from "./AssignmentList";
 import EventForm from "./EventForm";
@@ -51,6 +52,13 @@ export default function Dashboard() {
   const [health, setHealth] = useState("Not checked");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [undo, setUndo] = useState<{ mode: AppMode; schedule: Schedule } | null>(null);
+  const [restore, setRestore] = useState<Workspace | null>(null);
+  const [, refreshClock] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => refreshClock(value => value + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
   useEffect(() => {
     const timer = setTimeout(() => {
       const result = loadWorkspace();
@@ -91,7 +99,8 @@ export default function Dashboard() {
     );
   };
   const changed = (next: Schedule) => {
-    apply(next);
+    apply({ ...next, needsReplan: true });
+    setUndo(null);
     setDialog(null);
     setNotice("Saved. Generate a schedule to account for these changes.");
     setError("");
@@ -106,11 +115,15 @@ export default function Dashboard() {
         mode === "demo"
           ? demoResult(next, now)
           : await generateSchedule(next, now);
-      apply({ ...next, ...result, source: mode });
+      const updated = { ...next, ...result, source: mode, needsReplan: mode === "demo" ? next.needsReplan : false };
+      const changes = planChanges(next, updated, now);
+      const missing = result.warnings.reduce((sum, warning) => sum + warning.unscheduledMinutes, 0);
+      apply(updated);
+      setUndo({ mode, schedule: next });
       setNotice(
         mode === "demo"
           ? "Mock timetable refreshed. Demo replays authored sessions; it does not schedule new work."
-          : "Your study schedule has been updated.",
+          : `Your study schedule has been updated. ${changes.moved} moved, ${changes.added} added, ${changes.removed} removed; ${missing} minutes unscheduled.`,
       );
     } catch (error) {
       setError(
@@ -127,6 +140,7 @@ export default function Dashboard() {
     if (!block || block.status !== "planned" || block.locked) return;
     apply({
       ...schedule,
+      needsReplan: true,
       studyBlocks: schedule.studyBlocks.map((item) =>
         item.id === id ? { ...item, status: "completed", locked: true } : item,
       ),
@@ -142,6 +156,7 @@ export default function Dashboard() {
           : task,
       ),
     });
+    setUndo(null);
     setDialog(null);
     setNotice(
       "Session completed. Progress saved. Regenerate to update future study time and warnings.",
@@ -153,6 +168,7 @@ export default function Dashboard() {
     if (!block || block.status !== "planned" || block.locked) return;
     const next: Schedule = {
       ...schedule,
+      needsReplan: true,
       tasks: schedule.tasks.map((task) =>
         task.id === block.taskId
           ? { ...task, remainingTimeMinutes: remaining }
@@ -163,6 +179,17 @@ export default function Dashboard() {
       ),
     };
     apply(next);
+    setUndo(null);
+    setDialog(null);
+    await scheduleWork(next);
+  }
+  async function skip(id: string) {
+    const block = schedule.studyBlocks.find(item => item.id === id);
+    if (!block || block.status !== "planned" || block.locked) return;
+    const next: Schedule = { ...schedule, needsReplan: true,
+      studyBlocks: schedule.studyBlocks.map(item => item.id === id ? { ...item, status: "skipped", locked: true } : item) };
+    apply(next);
+    setUndo(null);
     setDialog(null);
     await scheduleWork(next);
   }
@@ -172,6 +199,7 @@ export default function Dashboard() {
     setNotice("");
     setError("");
     setDialog(null);
+    setUndo(null);
   }
   const remaining = schedule.tasks.reduce(
     (sum, task) => sum + task.remainingTimeMinutes,
@@ -180,9 +208,8 @@ export default function Dashboard() {
   const completed = schedule.studyBlocks.filter(
     (block) => block.status === "completed",
   ).length;
-  const planned = schedule.studyBlocks
-    .filter((block) => block.status === "planned")
-    .reduce((sum, block) => sum + duration(block), 0);
+  const planned = upcomingMinutes(schedule);
+  const missing = schedule.warnings.reduce((sum, warning) => sum + warning.unscheduledMinutes, 0);
   const selected =
     dialog?.type === "session"
       ? schedule.studyBlocks.find((block) => block.id === dialog.id)
@@ -311,6 +338,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="status-area" aria-live="polite">
+                {schedule.needsReplan && <div className="plan-dirty" role="status"><strong>Plan needs updating.</strong> {mode === "demo" ? "Demo mode replays samples; use Real backend to schedule your changes." : "Generate Schedule to account for your latest changes."}</div>}
                 {busy && (
                   <div className="info-banner">
                     <LoaderCircle className="spin" size={16} />
@@ -318,6 +346,14 @@ export default function Dashboard() {
                   </div>
                 )}
                 {notice && <div className="info-banner">{notice}</div>}
+                {undo?.mode === mode && <div className="plan-actions">
+                  <button className="button compact" onClick={() => {
+                    apply({ ...undo.schedule, needsReplan: true });
+                    setUndo(null);
+                    setNotice("Previous calendar restored. Your task edits and progress reports were kept. Generate Schedule to update the plan.");
+                    setError("");
+                  }}>Undo last replan</button>
+                </div>}
                 {error && (
                   <div className="error-banner" role="alert">
                     <AlertTriangle size={17} />
@@ -390,50 +426,71 @@ export default function Dashboard() {
                 )}
               </div>
               {section === "assignments" && (
-                <div className="stats-grid">
-                  <div className="stat">
-                    <span className="stat-icon purple">
-                      <BookOpen size={20} />
-                    </span>
-                    <div>
-                      <span>Active assignments</span>
-                      <strong>
-                        {
-                          schedule.tasks.filter(
-                            (task) => task.remainingTimeMinutes > 0,
-                          ).length
-                        }
-                        <small> to work on</small>
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-icon green">
-                      <Clock3 size={20} />
-                    </span>
-                    <div>
-                      <span>Planned study time</span>
-                      <strong>
-                        {hours(planned)}
-                        <small> on your calendar</small>
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-icon blue">
-                      <CheckCheck size={20} />
-                    </span>
-                    <div>
-                      <span>Completed sessions</span>
-                      <strong>
-                        {completed}
-                        <small> progress adds up</small>
-                      </strong>
-                    </div>
+              <div className="stats-grid">
+                <div className="stat">
+                  <span className="stat-icon purple">
+                    <BookOpen size={20} />
+                  </span>
+                  <div>
+                    <span>Remaining work</span>
+                    <strong>
+                      {hours(remaining)}
+                      <small> across assignments</small>
+                    </strong>
                   </div>
                 </div>
+                <div className="stat">
+                  <span className="stat-icon green">
+                    <Clock3 size={20} />
+                  </span>
+                  <div>
+                    <span>Upcoming study time</span>
+                    <strong>
+                      {hours(planned)}
+                      <small> excludes past sessions</small>
+                    </strong>
+                  </div>
+                </div>
+                <div className="stat">
+                  <span className="stat-icon blue">
+                    <CheckCheck size={20} />
+                  </span>
+                  <div>
+                    <span>Unscheduled work</span>
+                    <strong>
+                      {schedule.needsReplan ? "—" : hours(missing)}
+                      <small>{schedule.needsReplan ? " update plan to calculate" : " needs a time slot"}</small>
+                    </strong>
+                  </div>
+                </div>
+              </div>
               )}
               <footer className="dashboard-footer">
+              <div className="backup-actions">
+                <button className="button compact" onClick={() => {
+                  const url = URL.createObjectURL(new Blob([exportBackup(workspace)], { type: "application/json" }));
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = `schedule-maker-${new Date().toISOString().slice(0, 10)}.json`;
+                  link.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 1000);
+                }}>Export backup</button>
+                <label className="button compact">
+                  Import backup
+                  <input aria-label="Import backup file" type="file" accept=".json,application/json" className="backup-file" onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    try {
+                      if (file.size > 5_000_000) throw new Error("Backup must be under 5 MB. Your current data is unchanged.");
+                      setRestore(importBackup(await file.text()));
+                      setError("");
+                    } catch (error) { setError(error instanceof Error ? error.message : "Could not read backup."); }
+                  }} />
+                </label>
+              </div>
+
+                <span>{schedule.preferences.sleepHours.wakeUpTime} wake-up | {schedule.preferences.sleepHours.bedtime} bedtime | {completed} completed sessions saved</span>
                 <span
                   className={`source-badge ${mode === "backend" ? "real" : ""}`}
                 >
@@ -557,6 +614,7 @@ export default function Dashboard() {
               busy={busy}
               onComplete={() => complete(selected.id)}
               onUnfinished={(minutes) => void unfinished(selected.id, minutes)}
+              onSkip={() => void skip(selected.id)}
             />
           )}
           {dialog.type === "delete" && (
@@ -591,6 +649,25 @@ export default function Dashboard() {
           )}
         </Modal>
       )}
+      {restore && <Modal title="Restore backup?" onClose={() => { if (!busy) setRestore(null); }}>
+        <div className="form-stack">
+          <p>This replaces both saved workspaces on this device. The backup contains {restore.backend.tasks.length} real assignments and {restore.demo.tasks.length} demo assignments. Export your current data first if you want to keep it.</p>
+          {error && <p className="error" role="alert">{error}</p>}
+          <button className="button primary" disabled={busy} onClick={() => {
+            try {
+              saveWorkspace(restore);
+              setWorkspace(restore);
+              setPersist(true);
+              setRestore(null);
+              setDialog(null);
+              setUndo(null);
+              setError("");
+              setNotice("Backup restored. Generate Schedule to update imported plans.");
+            } catch { setError("Could not save the backup. Your current workspace is unchanged."); }
+          }}>Replace workspaces with backup</button>
+          <button className="button" disabled={busy} onClick={() => setRestore(null)}>Cancel restore</button>
+        </div>
+      </Modal>}
     </>
   );
 }

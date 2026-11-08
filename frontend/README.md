@@ -64,3 +64,37 @@ test; scheduling uses the real backend. The regular browser suite also covers
 clarification, discard, stale previews, malformed drafts, and API failures.
 The backend virtual environment and dependencies must already be installed.
 The test uses Microsoft Edge by default and closes both test servers afterward.
+
+## Planning controls and backups
+
+- Scheduling first tries to fit all work in deadline order. If it cannot, the
+  teammate's policy ranks work by grade weight multiplied by remaining work
+  relative to available study capacity. There is no manual priority override.
+- The saved **Plan needs updating** badge remains after changing inputs until real
+  backend generation succeeds. Demo mode continues to use authored sample data.
+- Generation shows moved, added and removed future sessions and unscheduled minutes.
+  **Undo last replan** restores the previous calendar while keeping task edits and
+  progress reports. It is one level and does not survive refresh.
+- **I Skipped** retains session history and remaining work, then replans. Failed
+  replanning preserves the report so Generate Schedule can retry.
+- Totals distinguish remaining work, upcoming planned time and unscheduled work.
+- **Export backup** and **Import backup** are in the footer on desktop and mobile.
+  Restore previews assignment counts and asks before replacing both workspaces.
+  Invalid files are rejected; import marks plans as needing regeneration.
+
+Pull requests and pushes to main run `.github/workflows/checks.yml`: Python tests,
+frontend unit tests, lint, TypeScript, build, browser regressions, and live Python
+integration. The workflow uses Chromium on Linux; local browser tests default to
+Microsoft Edge. GitHub-hosted execution occurs after the workflow is pushed.
+
+## Updated dashboard and theme
+
+Calendar and Assignments are separate navigation pages. Use Assignments for the
+remaining/upcoming/unscheduled totals and task editing; the calendar remains wide
+for month/week/day views. The sidebar theme toggle supports light/dark modes and
+remembers the selection separately from schedule data. Backup controls remain in
+the footer in both themes and on mobile.
+
+The backend now includes `/assistant/parse`, but an assistant input and a proposed
+schedule preview with Apply/Cancel are not yet part of this dashboard. See
+[assistant setup](../docs/ASSISTANT_API.md).

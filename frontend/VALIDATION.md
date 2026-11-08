@@ -1,22 +1,32 @@
 ﻿# Frontend implementation validation
 
-Implemented on `feature/frontend-dashboard`; no backend or root configuration files changed.
+Current integrated application checks:
 
-- `npm run lint`: passed (project code; bundled design-skill vendor files excluded).
-- `npx tsc --noEmit`: passed.
-- `npm run build`: passed; Next.js production page prerendered successfully.
-- `npm run test:e2e`: 4 passed in Microsoft Edge against the production build.
-- Existing FastAPI `GET /health`: HTTP 200, `{"status":"ok"}`.
-- Dashboard health button against the live FastAPI app: Connected.
-- Existing CORS configuration: allows `http://localhost:3000`.
-- Git whitespace validation: passed.
+- Python API, availability and dashboard scheduling: **63 tests passed**.
+- Frontend task, plan-accounting and backup validation: **28 tests passed**.
+- `npm run lint` and `npx tsc --noEmit`: passed.
+- `npm run build`: passed; production page prerendered successfully.
+- `npm run test:e2e`: **9 passed** in Microsoft Edge against the production build.
+- `npm run test:live`: **3 passed** using separate browser and real FastAPI servers.
+- Git whitespace validation and workflow YAML parsing: passed.
+- GitHub-hosted workflow execution is pending its first push; local equivalents pass.
+
+Assistant endpoint tests use mocked Gemini responses; no live model calls were
+made. Light/dark theme switching, persistence, storage failure handling and
+responsive layouts are verified together with the retained planning controls.
+
+New coverage includes feasibility-first weighted-pressure allocation, deterministic
+IDs, assistant work-shift preview scenarios, persisted plan-update state, summaries that ignore regenerated IDs,
+calendar undo that retains progress, skipped sessions with no completion credit,
+skip retry after network failure, future-only totals, valid/invalid backups,
+restore confirmation/cancellation, and footer backup controls on mobile.
 
 Browser coverage includes assignment creation/edit/deletion, hour-to-minute conversion,
 fixed-event validation/recurrence/edit/deletion, all preferences, persistence after
 refresh, completion without duplicate credit, unfinished history preservation,
 backend request serialization, valid response replacement, malformed-response/404/
 network failure preservation, saved unfinished work after failed rescheduling, retry,
-independent demo/real workspaces, week/day navigation, and no page overflow at
+independent demo/real workspaces, month/week/day navigation, and no page overflow at
 1440, 1024, 768, 390, and 320 pixels.
 
 The original regression tests use intercepted scheduling fixtures. The integration

@@ -9,12 +9,14 @@ export default function StudySessionModal({
   busy,
   onComplete,
   onUnfinished,
+  onSkip,
 }: {
   block: StudyBlock;
   task: Task;
   busy: boolean;
   onComplete: () => void;
   onUnfinished: (minutes: number) => void;
+  onSkip: () => void;
 }) {
   const [unfinished, setUnfinished] = useState(false);
   const canAct = block.status === "planned" && !block.locked;
@@ -52,6 +54,8 @@ export default function StudySessionModal({
           >
             <RotateCcw size={16} />I Didn&apos;t Finish
           </button>
+          <button className="button" disabled={busy} onClick={onSkip}>I Skipped</button>
+          <p className="muted small">Skipping keeps this session in your history, leaves remaining work unchanged, and replans future sessions.</p>
         </>
       )}
       {canAct && unfinished && (

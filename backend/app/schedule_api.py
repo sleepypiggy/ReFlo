@@ -70,7 +70,7 @@ class LockedBlock(InputModel):
     task_id: Identifier
     start: Instant
     end: Instant
-    status: Literal["planned", "completed", "unfinished"]
+    status: Literal["planned", "completed", "unfinished", "skipped"]
     locked: Literal[True]
 
     @model_validator(mode="after")
@@ -215,8 +215,11 @@ def _allocate(
         availability["fixed"] = event_windows(request, horizon)
     fixed = availability["fixed"]
     pause = timedelta(minutes=preferences.break_minutes)
-    reservations = [Window(block.start, block.end) for block in request.locked_blocks]
-    occupied = [Window(block.start - pause, block.end + pause) for block in reservations]
+    # Skipped history is occupancy, not time actually spent studying.
+    reservations = [Window(block.start, block.end) for block in request.locked_blocks if block.status != "skipped"]
+    occupied = [Window(block.start - (pause if block.status != "skipped" else timedelta()),
+                       block.end + (pause if block.status != "skipped" else timedelta()))
+                for block in request.locked_blocks]
     output = []
     for task in sorted(request.tasks, key=lambda item: (item.deadline, item.id)):
         remaining = budgets.get(task.id, 0)
