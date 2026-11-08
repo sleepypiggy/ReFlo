@@ -6,6 +6,11 @@ replanning, fixed-event subtraction, sleep preferences, Pydantic request
 validation, UTC responses, and configurable CORS. Database storage and
 authentication are not implemented.
 
+Dashboard scheduling tries all work in deadline order before applying shortage
+priorities based on grade weight and remaining effort relative to study capacity.
+Read the [policy and algorithm limitations](../frontend/API_CONTRACT.md#implemented-scheduling-rules-and-limits)
+for the score, tie rules, reservation accounting, and session-packing tradeoffs.
+
 See [API Integration](../README.md#api-integration) for the full contract and
 [the frontend handoff](../docs/FRONTEND_API.md) for connection examples.
 
@@ -113,6 +118,6 @@ From the repository root in PowerShell:
 
 ```powershell
 .\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
-.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability test_schedule
+.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability test_schedule test_priorities
 .\backend\.venv\Scripts\python.exe demo_week.py
 ```

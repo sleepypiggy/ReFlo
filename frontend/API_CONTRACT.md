@@ -121,11 +121,38 @@ to real mode starts an empty independent workspace. FullCalendar only renders st
 
 ## Implemented scheduling rules and limits
 
-- Assignments share free time and daily study capacity. Allocate by higher grade
-  weight first, then earliest deadline when weights match, then task ID for a
-  deterministic final tie. A later-deadline higher-weight assignment can take
-  time from an earlier-deadline lower-weight assignment. There is no separate
-  manual priority field.
+- Assignments share free time and daily study capacity. First try all remaining
+  work in earliest-deadline order (task ID breaks ties), filling the earliest
+  available slots. This reserves capacity for urgent work before flexible work
+  uses it. Grade weight does not displace urgent work when this full plan fits.
+- If the full plan does not fit, rank tasks by descending
+  `grade_weight * unreserved_remaining_minutes / max(1, standalone_capacity)`.
+  Standalone capacity is the minutes the session packer can place before that
+  task's deadline with all preferences, events and locked history, but without
+  other new work. This measures deadline pressure using actual study capacity,
+  rather than elapsed clock time. Scores use exact rational arithmetic. Ties use
+  earlier deadline, then greater remaining/capacity pressure, then task ID.
+  Tasks with no standalone capacity receive a shortage. Zero-weight tasks follow
+  positive-score tasks and use the same tie rules among themselves.
+- Admit each ranked task's work while preserving previously admitted budgets.
+  Each trial repacks all admitted work in deadline order, so a later task's
+  higher score does not require it to occupy earlier slots. If the whole budget
+  fails, binary search for a partial minute budget; then try lower-ranked tasks.
+  Pressure scores are calculated once per request, not after each admission.
+  Response ordering and generated IDs are deterministic and independent of task
+  input order. There is no separate manual priority field.
+- Tradeoffs: without breaks, divisible whole-minute work with a common release
+  time admits a complete earliest-deadline allocation whenever one exists in the
+  rounded available capacity. With nonzero breaks, task boundaries and fragmented
+  windows introduce packing effects: this greedy feasibility check can miss a
+  feasible arrangement. Binary search assumes monotonic packing feasibility;
+  break placement can violate that assumption and leave capacity unused. The
+  shortage policy prioritizes admitted minutes, not completed-task grade value,
+  total throughput, or fairness, and does not guarantee a globally optimal plan.
+  It uses the standard library and existing session engine; cached free windows
+  avoid repeated event expansion. In shortage cases, up to one standalone trial
+  and `1 + ceil(log2(remaining_minutes + 1))` admission trials per task may be
+  needed, each repacking accepted work; large fragmented requests cost more.
 - The shortage panel compares total remaining demand with the minutes covered by
   the current plan and lists unscheduled minutes for each affected task. These
   are allocations under the current weights and constraints, not a claim of

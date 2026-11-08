@@ -40,8 +40,11 @@ export default function TimeShortagePanel({ schedule, demo }: {
         <strong>{time(missing)} remains unscheduled</strong>.
       </p>
       <p className="muted small">
-        Higher grade weights get study time first. Equal weights use the closest
-        deadline. Sleep, fixed commitments, and study limits stay protected.
+        Earlier deadlines reserve study slots first. When work does not fit,
+        priority combines grade weight with remaining work relative to available
+        time before each deadline. Equal scores use the earlier deadline, then
+        greater deadline pressure, then assignment ID. Sleep, fixed commitments,
+        and study limits stay protected.
         Edit an assignment&apos;s grade weight or deadline, then generate a new
         schedule to account for changes.
       </p>
