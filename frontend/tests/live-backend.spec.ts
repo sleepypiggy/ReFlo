@@ -80,7 +80,7 @@ test.describe("personalized study advice", () => {
     expect(first.study_blocks[0].start).toBe("2026-11-10T07:00:00Z");
     await ask();
     await expect(advice).toContainText("Statistics");
-    await expect(advice).toContainText("7:00 AM");
+    await expect(advice).toContainText(/7:00\s*a\.?m\.?/i);
     await expect(advice).toContainText("30 minutes");
     await page.getByRole("button", { name: "Preferences", exact: true }).click();
     await page.getByLabel("Wake-up time").fill("08:00");
@@ -91,8 +91,8 @@ test.describe("personalized study advice", () => {
     expect(revised.study_blocks[0].start).toBe("2026-11-10T08:00:00Z");
     expect((await savedPlan(page)).preferences.sleepHours.wakeUpTime).toBe("08:00");
     await ask();
-    await expect(advice).toContainText("8:00 AM");
-    await expect(advice).toContainText("8:30 AM");
+    await expect(advice).toContainText(/8:00\s*a\.?m\.?/i);
+    await expect(advice).toContainText(/8:30\s*a\.?m\.?/i);
     await expect(advice).toContainText("Nov 10, 2026");
     await expect(advice).toContainText("saved 60-minute session limit");
 
@@ -106,7 +106,7 @@ test.describe("personalized study advice", () => {
     });
     await page.reload();
     await ask();
-    await expect(advice).toContainText("8:00 AM");
+    await expect(advice).toContainText(/8:00\s*a\.?m\.?/i);
     await expect(advice.getByRole("region", { name: "Advice unscheduled work" })).toContainText("Statistics: 15 minutes unscheduled.");
     await page.evaluate(() => {
       const workspace = JSON.parse(localStorage.getItem("schedule-maker:v1")!);

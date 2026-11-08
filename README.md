@@ -62,6 +62,10 @@ retain topic labels. Hover
 for full details or open a block to view its complete title and times. This
 changes the display only; event and study durations are preserved.
 
+Very short entries have a small minimum display height so a complete title line
+can fit. Their actual start/end times stay unchanged, and visually crowded blocks
+are arranged side by side rather than covering each other.
+
 ## Study Spacing
 
 The dashboard now spreads assignment work across available days by default, with

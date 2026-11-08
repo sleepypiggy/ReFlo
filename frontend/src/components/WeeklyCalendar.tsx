@@ -183,6 +183,8 @@ export default function WeeklyCalendar({
           editable={!busy}
           eventStartEditable={!busy}
           eventDurationEditable={false}
+          eventMinHeight={22}
+          slotEventOverlap={false}
           eventAllow={(_drop, event) => !busy && (event?.extendedProps.type !== "study" ||
             studyBlocks.some(block => block.id === event.extendedProps.blockId && canMoveStudy(block)))}
           eventDrop={(info) => {
