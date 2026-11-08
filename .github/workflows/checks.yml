@@ -44,6 +44,7 @@ jobs:
         run: |
           npm test
           npm run lint
+          npx next typegen
           npx tsc --noEmit
       - name: Production build
         working-directory: frontend
