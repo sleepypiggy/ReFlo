@@ -4,7 +4,7 @@ import {
   type Preferences,
   type StudyBlock,
 } from "../datatypes";
-import { duration, isPreserved, weekStart } from "./calendar";
+import { isPreserved, weekStart } from "./calendar";
 
 export const defaultPreferences: Preferences = {
   maxStudyTimeMinutes: 240,
@@ -140,9 +140,9 @@ export function demoResult(schedule: Schedule, now: Date) {
         (block) =>
           block.taskId === task.id &&
           block.status === "planned" &&
-          !isPreserved(block, now),
+          block.endTime > now,
       )
-      .reduce((sum, block) => sum + duration(block), 0);
+      .reduce((sum, block) => sum + Math.max(0, Math.floor((+block.endTime - Math.max(+now, +block.startTime)) / 60000)), 0);
     const minutes = Math.max(0, task.remainingTimeMinutes - planned);
     return minutes
       ? [

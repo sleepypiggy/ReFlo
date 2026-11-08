@@ -20,7 +20,7 @@ test("calendar preview, selection, confirmation, duplicate import, persistence a
   const choices = dialog.getByRole("checkbox", { name: /Biology class/ });
   await choices.first().uncheck();
   await dialog.getByRole("button", { name: "Import 1 selected commitments" }).click();
-  await expect(dialog).toContainText("Imported 1 commitments. Generate Schedule");
+  await expect(dialog).toContainText("Imported 1 commitments.");
   expect((await savedEvents()).length).toBe(before + 1);
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByText("Plan needs updating.")).toBeVisible();

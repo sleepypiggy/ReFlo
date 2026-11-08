@@ -21,7 +21,8 @@ import { checkHealth, generateSchedule } from "@/lib/api";
 import { duration, hours } from "@/lib/calendar";
 import { demoResult } from "@/lib/mockData";
 import { loadWorkspace, saveWorkspace, exportBackup, importBackup, type Workspace } from "@/lib/storage";
-import { hasStudyConflict, planChanges, upcomingMinutes } from "@/lib/plan";
+import { hasStudyConflict, planChanges, releaseConflictingPlacements, upcomingMinutes } from "@/lib/plan";
+import { moveCalendarItem, type CalendarMove } from "@/lib/calendarMoves";
 import AssignmentForm from "./AssignmentForm";
 import AssignmentList from "./AssignmentList";
 import EventForm from "./EventForm";
@@ -107,10 +108,31 @@ export default function Dashboard() {
     setError("");
   };
   function eventsChanged(next: Schedule) {
+    if (mode === "backend") next = releaseConflictingPlacements(next);
     changed(next);
     if (mode === "backend" && hasStudyConflict(next)) {
       void scheduleWork({ ...next, needsReplan: true }, true);
     }
+  }
+  function move(move: CalendarMove) {
+    if (busy) { setError("Wait for schedule generation to finish before moving an event."); return false; }
+    const result = moveCalendarItem(schedule, move);
+    if (!result.schedule) {
+      setError(`Move reverted. ${result.error}`);
+      setNotice("");
+      return false;
+    }
+    if (move.type === "fixed") {
+      const automatic = mode === "backend" && hasStudyConflict(result.schedule);
+      eventsChanged(result.schedule);
+      if (!automatic) setNotice("Commitment moved. Generate a schedule to account for this change. Only this occurrence was moved.");
+      return true;
+    }
+    apply(result.schedule);
+    setUndo(null);
+    setError("");
+    setNotice("Session moved and saved. This placement will be preserved when you regenerate.");
+    return true;
   }
   async function scheduleWork(next = schedule, eventReplan = false) {
     setBusy(true);
@@ -404,6 +426,8 @@ export default function Dashboard() {
               >
                 {section === "calendar" ? (
                   <WeeklyCalendar
+                    busy={busy}
+                    onMove={move}
                     events={schedule.events}
                     topics={schedule.topics}
                     tasks={schedule.tasks}

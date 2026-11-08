@@ -3,9 +3,16 @@ import { expandEvents, isPreserved } from "./calendar";
 
 /** Fixed commitments win over movable future study, including weekly repeats. */
 export function hasStudyConflict(schedule: Schedule, now = new Date()) {
-  return schedule.studyBlocks.some(block => !isPreserved(block, now) &&
+  return schedule.studyBlocks.some(block => block.status === "planned" && !block.locked && block.startTime > now &&
     expandEvents(schedule.events, block.startTime, block.endTime).some(event =>
       event.startTime < block.endTime && event.endTime > block.startTime));
+}
+
+/** A manually placed future session still yields to a new fixed commitment. */
+export function releaseConflictingPlacements(schedule: Schedule, now = new Date()): Schedule {
+  return { ...schedule, studyBlocks: schedule.studyBlocks.map(block =>
+    block.manuallyMoved && hasStudyConflict({ ...schedule, studyBlocks: [block] }, now)
+      ? { ...block, manuallyMoved: false } : block) };
 }
 
 export function upcomingMinutes(schedule: Schedule, now = new Date()) {

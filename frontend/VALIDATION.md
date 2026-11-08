@@ -2,11 +2,11 @@
 
 Current integrated application checks:
 
-- Python API, availability and dashboard scheduling: **91 tests passed**.
-- Frontend calendar, task, topic, plan-accounting and backup validation: **57 tests passed**.
+- Python API, availability and dashboard scheduling: **93 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **65 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **17 passed** in Microsoft Edge against the production build.
+- `npm run test:e2e`: **19 passed** in Microsoft Edge against the production build.
 - `npm run test:live`: **6 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
@@ -86,3 +86,9 @@ browser checks keep the selected event times unchanged while study sessions
 move. A network-failure regression preserves the saved event, assignments and
 study history across refresh, then verifies successful manual retry. Boundary
 touching and preserved historical/locked entries do not trigger automatic moves.
+
+Drag-and-drop integration keeps fixed events authoritative: moving a commitment
+onto a future manually placed study session releases only the conflicting pin
+and replans automatically. Other pins and locked history remain intact. A browser
+regression verifies the outgoing reservations, fixed event time and revised study
+block; existing recurring occurrence movement and manual study placement tests pass.

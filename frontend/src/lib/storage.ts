@@ -95,6 +95,10 @@ function revive(value: Schedule): Schedule {
       });
     }),
     events: value.events.map((event) => {
+      if (event.excludedStarts !== undefined && (!Array.isArray(event.excludedStarts) ||
+          event.excludedStarts.length > 2000 || event.excludedStarts.some(start => typeof start !== "string")))
+        throw new Error("Invalid recurrence exceptions");
+      const excludedStarts = event.excludedStarts?.map(start => date(start as unknown as Date).toISOString());
       if (event.color !== undefined && !isTopicColor(event.color)) throw new Error("Invalid saved event color");
       const startTime = date(event.startTime), endTime = date(event.endTime);
       if (typeof event.name !== "string" || !event.name.trim() || endTime <= startTime ||
@@ -110,7 +114,7 @@ function revive(value: Schedule): Schedule {
         new Intl.DateTimeFormat("en", { timeZone: source.timezone });
         if (source.recurrenceId) date(source.recurrenceId as unknown as Date);
       }
-      return { ...event, startTime, endTime, topicId: topics.some((topic) => topic.id === event.topicId) ? event.topicId : undefined };
+      return { ...event, excludedStarts, startTime, endTime, topicId: topics.some((topic) => topic.id === event.topicId) ? event.topicId : undefined };
     }),
     studyBlocks: value.studyBlocks.map((block) => {
       if (
@@ -119,7 +123,8 @@ function revive(value: Schedule): Schedule {
       )
         throw new Error("Invalid saved session");
       const startTime = date(block.startTime), endTime = date(block.endTime);
-      if (endTime <= startTime || (block.locked !== undefined && typeof block.locked !== "boolean"))
+      if (endTime <= startTime || (block.locked !== undefined && typeof block.locked !== "boolean") ||
+          (block.manuallyMoved !== undefined && typeof block.manuallyMoved !== "boolean"))
         throw new Error("Invalid saved session");
       return { ...block, startTime, endTime };
 

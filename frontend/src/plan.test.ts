@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Task, type StudyBlock } from "./datatypes";
 import { initialWorkspace, exportBackup, importBackup } from "./lib/storage";
-import { hasStudyConflict, upcomingMinutes, planChanges } from "./lib/plan";
+import { hasStudyConflict, releaseConflictingPlacements, upcomingMinutes, planChanges } from "./lib/plan";
 
 const now = new Date("2026-11-10T10:00:00Z");
 const block = (id: string, start: string, end: string, status: StudyBlock["status"] = "planned"): StudyBlock =>
@@ -14,6 +14,22 @@ function schedule() {
 }
 
 describe("plan accounting", () => {
+  it("releases only conflicting future manual placements when a fixed event wins", () => {
+    const plan = schedule();
+    plan.events = [{ id: "concert", name: "Concert", startTime: new Date("2026-11-10T11:00:00Z"),
+      endTime: new Date("2026-11-10T12:00:00Z"), timeMinutes: 60, remainingTimeMinutes: 60 }];
+    plan.studyBlocks = [
+      { ...block("overlap", "2026-11-10T11:00:00Z", "2026-11-10T12:00:00Z"), manuallyMoved: true },
+      { ...block("other", "2026-11-10T13:00:00Z", "2026-11-10T14:00:00Z"), manuallyMoved: true },
+      { ...block("locked", "2026-11-10T11:00:00Z", "2026-11-10T12:00:00Z"), manuallyMoved: true, locked: true },
+    ];
+    assert.equal(hasStudyConflict(plan, now), true);
+    const next = releaseConflictingPlacements(plan, now);
+    assert.equal(next.studyBlocks[0].manuallyMoved, false);
+    assert.equal(next.studyBlocks[1], plan.studyBlocks[1]);
+    assert.equal(next.studyBlocks[2], plan.studyBlocks[2]);
+    assert.equal(plan.studyBlocks[0].manuallyMoved, true);
+  });
   it("detects future commitment overlaps, including later weekly occurrences", () => {
     const plan = schedule();
     plan.studyBlocks = [block("future", "2026-11-17T11:00:00Z", "2026-11-17T12:00:00Z")];
