@@ -35,6 +35,85 @@ async function savedPlan(page: Page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend);
 }
 
+test.describe("fixed event impact preview", () => {
+  test.use({ timezoneId: "UTC" });
+  test("partial fit shows removed and added slots and commits only after Apply", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-10T19:00:00Z"));
+    await page.addInitScript(() => {
+      if (localStorage.getItem("schedule-maker:v1")) return;
+      const plan = {
+        weekStart: "2026-11-09T00:00:00Z", source: "backend",
+        tasks: [{ id: "stats", name: "Statistics", estimatedTimeMinutes: 30,
+          remainingTimeMinutes: 30, deadline: "2026-11-10T20:15:00Z", gradeWeight: 20 }],
+        events: [], warnings: [],
+        studyBlocks: [{ id: "original-slot", taskId: "stats", startTime: "2026-11-10T19:30:00Z",
+          endTime: "2026-11-10T20:00:00Z", status: "planned" }],
+        preferences: { maxStudyTimeMinutes: 120, maxSessionTimeMinutes: 60,
+          breakDurationMinutes: 15, spreadAssignments: false,
+          sleepHours: { wakeUpTime: "19:00", bedtime: "22:00" } },
+      };
+      localStorage.setItem("schedule-maker:v1", JSON.stringify({
+        mode: "backend", backend: plan, demo: { ...plan, source: "demo" },
+      }));
+    });
+    const shift = { type: "event_draft", title: "Work shift",
+      start: "2026-11-10T19:00:00Z", end: "2026-11-10T20:00:00Z" };
+    await page.route("**/assistant/parse", route => route.fulfill({ json: shift }));
+    await page.goto("/");
+    await expect(page.locator(".study-event")).toHaveCount(1);
+    const before = await savedPlan(page);
+    const prepare = async () => {
+      await page.getByLabel("Assistant message").fill("I have work from 7 to 8 tonight");
+      const response = page.waitForResponse(r => r.url().endsWith("/schedule") && r.request().method() === "POST");
+      await page.getByRole("button", { name: "Preview schedule", exact: true }).click();
+      const result = await response;
+      expect(result.status()).toBe(200);
+      const request = result.request().postDataJSON();
+      expect(request.events[0].start).toBe(shift.start.replace("Z", ".000Z"));
+      expect(request.events[0].end).toBe(shift.end.replace("Z", ".000Z"));
+      expect(request.tasks[0].remaining_minutes).toBe(30);
+      const data = await result.json();
+      expect(data.study_blocks).toHaveLength(1);
+      expect(data.study_blocks[0].start).toBe("2026-11-10T20:00:00Z");
+      expect(data.study_blocks[0].end).toBe("2026-11-10T20:15:00Z");
+      expect(data.unscheduled).toEqual([expect.objectContaining({ task_id: "stats", minutes: 15 })]);
+      const preview = page.getByRole("region", { name: "Revised schedule preview" });
+      await expect(preview).toContainText("Work shift");
+      await expect(preview).toContainText("7:00 PM");
+      await expect(preview).toContainText("8:00 PM");
+      await expect(preview.getByRole("region", { name: "Removed study slots" })).toContainText("7:30 PM");
+      await expect(preview.getByRole("region", { name: "Removed study slots" })).toContainText("8:00 PM");
+      await expect(preview.getByRole("region", { name: "Added study slots" })).toContainText("8:00 PM");
+      await expect(preview.getByRole("region", { name: "Added study slots" })).toContainText("8:15 PM");
+      await expect(preview.getByRole("region", { name: "Affected assignment totals" }))
+        .toContainText("Statistics: 15 minutes scheduled; 15 minutes unscheduled before the deadline.");
+      expect(await savedPlan(page)).toEqual(before);
+      await expect(page.locator(".fixed-event")).toHaveCount(0);
+      await expect(page.locator(".study-event")).toHaveCount(1);
+      return preview;
+    };
+    let preview = await prepare();
+    await preview.getByRole("button", { name: "Discard preview" }).click();
+    expect(await savedPlan(page)).toEqual(before);
+    await expect(page.locator(".fixed-event")).toHaveCount(0);
+    preview = await prepare();
+    await preview.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(preview).toHaveCount(0);
+    await expect(page.locator(".fixed-event")).toHaveCount(1);
+    await expect.poll(async () => (await savedPlan(page)).events.length).toBe(1);
+    const applied = await savedPlan(page);
+    expect(applied.events[0].startTime).toBe("2026-11-10T19:00:00.000Z");
+    expect(applied.events[0].endTime).toBe("2026-11-10T20:00:00.000Z");
+    expect(applied.studyBlocks).toEqual([expect.objectContaining({
+      taskId: "stats", startTime: "2026-11-10T20:00:00.000Z", endTime: "2026-11-10T20:15:00.000Z",
+    })]);
+    expect(applied.warnings[0].unscheduledMinutes).toBe(15);
+    await page.reload();
+    await expect(page.locator(".fixed-event")).toHaveCount(1);
+    expect((await savedPlan(page)).studyBlocks).toEqual(applied.studyBlocks);
+  });
+});
+
 test("spacing preference distributes real study work and can restore earliest packing", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
   await page.goto("/");

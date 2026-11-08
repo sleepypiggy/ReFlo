@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { Event, Schedule } from "@/datatypes";
 import { generateSchedule, parseAssistant } from "@/lib/api";
+import { eventPreviewChanges } from "@/lib/eventPreview";
 import TimeShortagePanel from "./TimeShortagePanel";
 
 const when = (date: Date) => date.toLocaleString(undefined, {
@@ -17,9 +18,12 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [preview, setPreview] = useState<{ base: Schedule; next: Schedule; event: Event } | null>(null);
+  const [preview, setPreview] = useState<{ base: Schedule; next: Schedule; event: Event; now: Date } | null>(null);
   // Any intervening edit invalidates the preview so Apply cannot overwrite newer work.
   const currentPreview = preview?.base === schedule ? preview : null;
+  const changes = currentPreview
+    ? eventPreviewChanges(currentPreview.base, currentPreview.next, currentPreview.now)
+    : null;
 
   function reset() {
     setPreview(null);
@@ -58,7 +62,7 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
       };
       const next = { ...schedule, events: [...schedule.events, draft] };
       const revised = await generateSchedule(next, now);
-      setPreview({ base: schedule, next: { ...next, ...revised, source: "backend" }, event: draft });
+      setPreview({ base: schedule, next: { ...next, ...revised, source: "backend", needsReplan: false }, event: draft, now });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Assistant request failed. Please try again.");
     } finally {
@@ -87,21 +91,40 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
         </div>
       </form>
       {error && <p className="error-banner" role="alert">{error}</p>}
-      {currentPreview && (
+      {currentPreview && changes && (
         <section className="assistant-preview form-stack" aria-label="Revised schedule preview">
           <h3>Revised schedule preview</h3>
           <p><strong>{currentPreview.event.name}</strong><br />
             {when(currentPreview.event.startTime)} – {when(currentPreview.event.endTime)}</p>
           <p className="muted">Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}. Existing commitments and locked history are kept. Your calendar has not changed.</p>
-          <h4>Revised study sessions</h4>
-          {currentPreview.next.studyBlocks.length ? <ul className="assistant-sessions">
-            {[...currentPreview.next.studyBlocks].sort((a, b) => +a.startTime - +b.startTime).map((block) => (
-              <li key={block.id}>
-                <strong>{schedule.tasks.find((task) => task.id === block.taskId)?.name}</strong>
-                <span>{when(block.startTime)} – {when(block.endTime)} ({block.status})</span>
-              </li>
-            ))}
-          </ul> : <p>No study sessions in the revised plan.</p>}
+          <p>Removed and added slots are shown separately; a session may be shortened or split.</p>
+          {([
+            ["Removed study slots", changes.removed],
+            ["Added study slots", changes.added],
+          ] as const).map(([label, blocks]) => (
+            <section key={label} aria-label={label}>
+              <h4>{label}</h4>
+              {blocks.length ? <ul className="assistant-sessions">
+                {blocks.map(block => (
+                  <li key={JSON.stringify([block.taskId, +block.startTime, +block.endTime])}>
+                    <strong>{schedule.tasks.find(task => task.id === block.taskId)?.name}</strong>
+                    <span>{when(block.startTime)} – {when(block.endTime)}</span>
+                  </li>
+                ))}
+              </ul> : <p>None.</p>}
+            </section>
+          ))}
+          <section aria-label="Affected assignment totals">
+            <h4>Affected assignments</h4>
+            {changes.assignments.length ? <ul>
+              {changes.assignments.map(item => (
+                <li key={item.taskId}>
+                  <strong>{schedule.tasks.find(task => task.id === item.taskId)?.name}</strong>
+                  {": "}{item.scheduledMinutes} minutes scheduled; {item.unscheduledMinutes} minutes unscheduled before the deadline.
+                </li>
+              ))}
+            </ul> : <p>No future study slots or unscheduled minutes changed.</p>}
+          </section>
           {currentPreview.next.warnings.length > 0 && <TimeShortagePanel schedule={currentPreview.next} demo={false} />}
           <div className="assistant-actions">
             <button className="button primary" onClick={() => { onApply(currentPreview.next); reset(); }}>Apply</button>
