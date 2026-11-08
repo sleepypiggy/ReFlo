@@ -164,3 +164,10 @@ production build, 21 browser regression cases, and seven live-backend cases.
 Separate teammate testing in Real backend mode confirmed clarification for
 missing study time and grade weight, preservation of the 10 PM deadline, and
 saving 30 minutes and 10% after Apply without the one-hour offset.
+
+Very short event clipping was reproduced with a one-minute event whose title
+line extended below the block. A 22px minimum display height and conservative
+whole-line cutoffs now cover 1/5/10/15/20/25/45/65/80-minute events in week and day
+views. Adjacent visually crowded event/study blocks must not cover each other.
+Only display geometry changes; actual timestamps remain unchanged. Desktop and
+mobile screenshots were visually reviewed after the fix.

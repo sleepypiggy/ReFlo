@@ -312,20 +312,20 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
 .calendar-event-title { font-size: 13px; font-weight: 600; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-event-time { font-size: 12px; line-height: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .calendar-event-topic, .calendar-change-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@container study-block (max-height: 65px) {
+@container study-block (max-height: 66px) {
   .calendar-change-label { display: none; }
   .calendar-update-icon { display: inline-block; vertical-align: -1px; margin-right: 3px; }
 }
-@container study-block (max-height: 51px) {
+@container study-block (max-height: 52px) {
   .calendar-event-topic { display: none; }
 }
-@container study-block (max-height: 35px) {
+@container study-block (max-height: 36px) {
   .calendar-event-time { display: none; }
 }
-@container study-block (max-height: 16px) {
+@container study-block (max-height: 20px) {
   .calendar-event-content { padding: 0 2px; }
-  .calendar-event-title { font-size: 10px; line-height: 11px; }
-  .session-lock-icon, .calendar-update-icon { width: 10px; height: 10px; }
+  .calendar-event-title { font-size: 11px; line-height: 14px; }
+  .session-lock-icon, .calendar-update-icon { width: 11px; height: 11px; }
 }
 .study-calendar .calendar-time-label { font-size: 12px; color: var(--secondary-ink); }
 .study-calendar .calendar-day-label { font-size: 13px; font-weight: 500; color: var(--ink); padding: 17px 0; }
