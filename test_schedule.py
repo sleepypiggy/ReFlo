@@ -3,6 +3,7 @@
 import copy
 import unittest
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 
@@ -97,6 +98,61 @@ class DashboardApiTests(unittest.TestCase):
         data = self.plan()
         self.assertEqual(minutes(data["study_blocks"]), 240)
         self.assertTrue(all(dt(block["start"]) >= dt("2026-11-10T10:15:00Z") for block in data["study_blocks"]))
+
+    def test_assistant_work_shift_preview(self):
+        """Preview a hand-written shift without crediting unfinished history."""
+        zone = ZoneInfo("America/Vancouver")
+
+        def local(hour, minute=0):
+            return datetime(2026, 11, 10, hour, minute, tzinfo=zone)
+
+        self.payload.update(
+            current_time=local(18).isoformat(), timezone="America/Vancouver",
+        )
+        self.payload["tasks"][0].update(remaining_minutes=30)
+        self.payload["preferences"].update(
+            wake_up_time="09:00", bedtime="22:00", break_minutes=15,
+        )
+        unfinished = {
+            "id": "unfinished-statistics", "task_id": "statistics",
+            "start": local(17, 46).isoformat(), "end": local(18, 46).isoformat(),
+            "status": "unfinished", "locked": True,
+        }
+        self.payload["locked_blocks"] = [copy.deepcopy(unfinished)]
+        # Deliberately hand-written event draft: no assistant/model call needed.
+        shift_draft = {
+            "id": "work-shift-preview", "title": "Work shift",
+            "start": local(19).isoformat(), "end": local(20).isoformat(),
+            "repeat_on": [],
+        }
+        cases = (
+            ("no shift", [], local(21), local(19, 1), local(19, 31), 0),
+            ("shift fits", [shift_draft], local(21), local(20), local(20, 30), 0),
+            ("shift leaves shortage", [shift_draft], local(20, 15), local(20), local(20, 15), 15),
+        )
+        for name, events, deadline, start, end, missing in cases:
+            with self.subTest(case=name):
+                self.payload["events"] = copy.deepcopy(events)
+                self.payload["tasks"][0]["deadline"] = deadline.isoformat()
+                data = self.plan()
+                self.assertEqual(len(data["study_blocks"]), 1)
+                block = data["study_blocks"][0]
+                self.assertEqual(block["task_id"], "statistics")
+                self.assertEqual(dt(block["start"]).astimezone(zone), start)
+                self.assertEqual(dt(block["end"]).astimezone(zone), end)
+                self.assertEqual(minutes(data["study_blocks"]), 30 - missing)
+                if missing:
+                    self.assertEqual(len(data["unscheduled"]), 1)
+                    self.assertEqual(data["unscheduled"][0]["task_id"], "statistics")
+                    self.assertEqual(data["unscheduled"][0]["minutes"], missing)
+                else:
+                    self.assertEqual(data["unscheduled"], [])
+                self.assertEqual(self.payload["locked_blocks"], [unfinished])
+                self.assertGreaterEqual(dt(block["start"]) - dt(unfinished["end"]),
+                                        timedelta(minutes=15))
+                for event in events:
+                    self.assertTrue(dt(block["end"]) <= dt(event["start"])
+                                    or dt(block["start"]) >= dt(event["end"]))
 
     def test_future_planned_locked_session_reserves_remaining_work(self):
         self.payload["locked_blocks"] = [{"id": "reserved", "task_id": "statistics", "start": "2026-11-10T09:00:00Z",
