@@ -24,7 +24,7 @@ test.describe("calendar files with the scheduler", () => {
     await expect(page.getByText("Plan needs updating.")).toHaveCount(0);
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Export study calendar" }).click();
-    expect((await download).suggestedFilename()).toBe("schedule-maker-study.ics");
+    expect((await download).suggestedFilename()).toBe("reflo-study.ics");
   });
 });
 
@@ -154,7 +154,7 @@ test.describe("fixed event impact preview", () => {
     await expect(page.locator(".study-event")).toHaveCount(1);
     const before = await savedPlan(page);
     const prepare = async () => {
-      await page.getByLabel("Assistant message").fill("I have work from 7 to 8 tonight");
+      await page.getByLabel("Message Flo").fill("I have work from 7 to 8 tonight");
       const response = page.waitForResponse(r => r.url().endsWith("/schedule") && r.request().method() === "POST");
       await page.getByRole("button", { name: "Send message", exact: true }).click();
       const result = await response;
@@ -492,7 +492,7 @@ test("real Python planning, unfinished work, work-shift shortage, and persistenc
       title: shift.title, start: shift.start, end: shift.end, deadline: null,
       estimated_minutes: null, grade_weight: null, sources: {} },
   } }));
-  await page.getByLabel("Assistant message").fill("I work Thursday from 6:15 to 7:15 pm");
+  await page.getByLabel("Message Flo").fill("I work Thursday from 6:15 to 7:15 pm");
   const shortageResponse = page.waitForResponse(response => response.url().endsWith("/schedule") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Send message", exact: true }).click();
   const shortage = await (await shortageResponse).json();

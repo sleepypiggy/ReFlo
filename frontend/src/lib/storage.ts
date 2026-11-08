@@ -186,6 +186,6 @@ export function importBackup(text: string): Workspace {
     // Imported dates/plans may come from another timezone or an earlier day.
     return { ...workspace, demo: { ...workspace.demo, needsReplan: true }, backend: { ...workspace.backend, needsReplan: true } };
   } catch {
-    throw new Error("Invalid backup. Use a Schedule Maker version 1 JSON backup under 5 MB. Your current data is unchanged.");
+    throw new Error("Invalid backup. Use a ReFlo version 1 JSON backup under 5 MB. Your current data is unchanged.");
   }
 }

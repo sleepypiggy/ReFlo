@@ -24,7 +24,7 @@ export default function CalendarFiles({ schedule, onImport }: { schedule: Schedu
           const url = URL.createObjectURL(new Blob([exportStudyCalendar(schedule)], { type: "text/calendar;charset=utf-8" }));
           const link = document.createElement("a");
           link.href = url;
-          link.download = "schedule-maker-study.ics";
+          link.download = "reflo-study.ics";
           link.click();
           setTimeout(() => URL.revokeObjectURL(url), 1000);
           setError(""); setSuccess("Study calendar downloaded.");

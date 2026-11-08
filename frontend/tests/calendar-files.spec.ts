@@ -36,11 +36,11 @@ test("calendar preview, selection, confirmation, duplicate import, persistence a
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export study calendar" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("schedule-maker-study.ics");
+  expect(download.suggestedFilename()).toBe("reflo-study.ics");
   const text = await readFile((await download.path())!, "utf8");
   expect(text).toContain("BEGIN:VCALENDAR\r\n");
   expect(text).toContain("VERSION:2.0");
-  expect(text).toContain("PRODID:-//Schedule Maker//Study planner//EN");
+  expect(text).toContain("PRODID:-//ReFlo//Study planner//EN");
   const blocks = await page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).demo.studyBlocks);
   const planned = blocks.filter((block: { status: string; endTime: string }) => block.status === "planned" && new Date(block.endTime) > new Date("2026-11-04T08:00:00Z"));
   expect(text.match(/BEGIN:VEVENT/g)?.length).toBe(planned.length);

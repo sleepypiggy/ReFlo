@@ -1,1 +1,1 @@
-"""Schedule Maker backend."""
+"""ReFlo backend."""
