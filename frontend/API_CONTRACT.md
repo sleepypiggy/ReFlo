@@ -144,18 +144,28 @@ to real mode starts an empty independent workspace. FullCalendar only renders st
   Pressure scores are calculated once per request, not after each admission.
   Response ordering and generated IDs are deterministic and independent of task
   input order. There is no separate manual priority field.
-- Tradeoffs: without breaks, divisible whole-minute work with a common release
-  time admits a complete earliest-deadline allocation whenever one exists in the
-  rounded available capacity. With nonzero breaks, task boundaries and fragmented
-  windows introduce packing effects: this greedy feasibility check can miss a
-  feasible arrangement. Binary search assumes monotonic packing feasibility;
-  break placement can violate that assumption and leave capacity unused. The
+- Tradeoffs: earliest-deadline allocation is complete for divisible work with a
+  common release time and no breaks. The 15-minute block minimum means small
+  remainders are **not divisible work**: even without breaks, fragmented windows
+  can defeat greedy packing. Exact comparisons cover full feasibility on aligned
+  15-minute slots (session maximum 15; demands, daily limits and boundaries all
+  multiples of 15), and feasibility plus priority admission on one contiguous
+  same-day interval without breaks or required session splitting. These checks
+  do not imply completeness for general dashboard requests.
+  With nonzero breaks, task boundaries and fragmented windows introduce further
+  packing effects: this greedy feasibility check can miss a feasible arrangement.
+  Binary search assumes monotonic packing feasibility; break placement and the
+  minimum/maximum session lengths can violate that assumption and leave capacity
+  unused. Standalone capacity is also a heuristic packing result, not an exact
+  maximum; redistributing a short tail may underestimate it. The
   shortage policy prioritizes admitted minutes, not completed-task grade value,
   total throughput, or fairness, and does not guarantee a globally optimal plan.
   It uses the standard library and existing session engine; cached free windows
   avoid repeated event expansion. In shortage cases, up to one standalone trial
   and `1 + ceil(log2(remaining_minutes + 1))` admission trials per task may be
   needed, each repacking accepted work; large fragmented requests cost more.
+  See [scheduler verification](../docs/SCHEDULER_VERIFICATION.md) for fixed-seed
+  invariants, the independent bounded reference solver and measured counterexamples.
 - The shortage panel compares total remaining demand with the minutes covered by
   the current plan and lists unscheduled minutes for each affected task. These
   are allocations under the current weights and constraints, not a claim of

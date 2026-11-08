@@ -11,7 +11,6 @@ from fastapi import APIRouter
 from pydantic import AwareDatetime, BeforeValidator, Field, StrictBool, StrictInt, model_validator
 
 from .api import InputModel, local_time, timezone_name
-from .availability import available_study_windows
 from .scheduler import Assignment, Window, schedule_assignment
 
 router = APIRouter(tags=["Dashboard scheduling"])
@@ -236,17 +235,17 @@ def _allocate(
             next_midnight = wall(day + timedelta(days=1), time.min, zone)
             day_start, day_end = max(now, midnight), min(task.deadline, next_midnight)
             if day_start < day_end:
-                # Calculate normal waking hours with the teammate's function.
+                # Compare instants in UTC: local datetime ordering ignores fold
+                # when both endpoints share a ZoneInfo at the fall-back hour.
                 # Overnight waking hours are split around local midnight.
                 wake, bed = preferences.wake_up_time, preferences.bedtime
                 key = (day_start, day_end)
                 if key in availability:
                     windows = availability[key]
                 elif wake < bed:
-                    local_windows = available_study_windows(
-                        day_start.astimezone(zone), day_end.astimezone(zone), wake, bed, [],
-                    )
-                    windows = [Window(item.start.astimezone(UTC), item.end.astimezone(UTC)) for item in local_windows]
+                    windows = [Window(max(day_start, wall(day, wake, zone)),
+                                      min(day_end, wall(day, bed, zone)))]
+                    windows = [item for item in windows if item.start < item.end]
                 else:
                     windows = [Window(day_start, min(day_end, wall(day, bed, zone))),
                                Window(max(day_start, wall(day, wake, zone)), day_end)]
@@ -310,8 +309,8 @@ def _space_dayparts(request: ScheduleRequest, blocks: list[tuple[str, datetime, 
         start, end = max(now, midnight), tomorrow
         wake, bed = preferences.wake_up_time, preferences.bedtime
         if wake < bed:
-            windows = [Window(item.start.astimezone(UTC), item.end.astimezone(UTC))
-                       for item in available_study_windows(start.astimezone(zone), end.astimezone(zone), wake, bed, [])]
+            windows = [Window(max(start, wall(day, wake, zone)), min(end, wall(day, bed, zone)))]
+            windows = [window for window in windows if window.start < window.end]
         else:
             windows = [Window(start, min(end, wall(day, bed, zone))),
                        Window(max(start, wall(day, wake, zone)), end)]
