@@ -16,6 +16,16 @@ commitments to edit/delete; click study sessions to complete or report unfinishe
 work. Assignment deletion also removes its sessions after a confirmation. Updating
 inputs does not automatically regenerate the plan; use Generate Schedule.
 
+In **Real backend**, use **Schedule assistant** to describe a fixed commitment.
+It calls `POST /assistant/parse` with the current time and browser timezone. If
+details are missing, answer the displayed question; the original request is kept
+as context. An event draft is sent with your existing tasks, commitments,
+preferences, and locked history to `POST /schedule`. Review the revised sessions
+and shortage warnings, then click **Apply** to save the commitment and revised
+plan together. **Discard preview**, refresh, or later edits leave the draft unsaved.
+The assistant requires `GEMINI_API_KEY` in `backend/.env` (see
+`backend/.env.example`); demo mode remains independent of the assistant.
+
 Backend setup and JSON examples: [API_CONTRACT.md](API_CONTRACT.md).
 Validation results and design-check limitations: [VALIDATION.md](VALIDATION.md).
 The `/health` endpoint can be checked from the footer. FastAPI now implements
@@ -48,6 +58,9 @@ recipes. No authentication, database, drag-and-drop, or frontend scheduler is us
 From this directory, run `npm run test:live`. This starts isolated FastAPI (8100)
 and Next.js development (3101) servers and uses real browser HTTP requests, with
 no mocked scheduling responses. It verifies generation, unfinished work, a fixed
-shift causing a shortage, UTC/Vancouver rendering, and persistence after refresh.
+shift causing a shortage through assistant preview/Apply, UTC/Vancouver rendering,
+and persistence after refresh. The assistant model response is stubbed in this
+test; scheduling uses the real backend. The regular browser suite also covers
+clarification, discard, stale previews, malformed drafts, and API failures.
 The backend virtual environment and dependencies must already be installed.
 The test uses Microsoft Edge by default and closes both test servers afterward.

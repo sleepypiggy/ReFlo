@@ -1,7 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
 // Real browser requests go through CORS to a separate FastAPI process. No API
-// routes are intercepted. Fixed commitments leave exactly the prototype windows.
+// scheduling routes are intercepted. Only the assistant model output is stubbed
+// in the preview step. Fixed commitments leave exactly the prototype windows.
 async function savedPlan(page: Page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend);
 }
@@ -133,16 +134,25 @@ test("real Python planning, unfinished work, work-shift shortage, and persistenc
     new Date(block.startTime) < new Date("2026-11-10T20:00:00-07:00"));
   expect(history).toHaveLength(2);
 
-  await page.getByRole("button", { name: "Add Event", exact: true }).click();
-  await page.getByLabel("Event name").fill("Thursday work shift");
-  await page.getByLabel("Start datetime").fill("2026-11-12T18:15");
-  await page.getByLabel("End datetime").fill("2026-11-12T19:15");
-  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  const beforePreview = await savedPlan(page);
+  const shift = await page.evaluate(() => ({
+    type: "event_draft", title: "Thursday work shift",
+    start: new Date("2026-11-12T18:15").toISOString(),
+    end: new Date("2026-11-12T19:15").toISOString(),
+  }));
+  await page.route("**/assistant/parse", route => route.fulfill({ json: shift }));
+  await page.getByLabel("Assistant message").fill("I work Thursday from 6:15 to 7:15 pm");
   const shortageResponse = page.waitForResponse(response => response.url().endsWith("/schedule") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await page.getByRole("button", { name: "Preview schedule", exact: true }).click();
   const shortage = await (await shortageResponse).json();
   expect(shortage.study_blocks).toHaveLength(2);
   expect(shortage.unscheduled[0].minutes).toBe(60);
+  const preview = page.getByRole("region", { name: "Revised schedule preview" });
+  await expect(preview).toContainText("Thursday work shift");
+  await expect(preview).toContainText("1 alert");
+  expect(await savedPlan(page)).toEqual(beforePreview);
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(preview).toHaveCount(0);
   await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
   await expect(page.locator(".task-warning")).toContainText("1h still needs a time slot");
   await page.reload();

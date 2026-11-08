@@ -347,3 +347,12 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.assistant-panel { border: 1px solid var(--hairline); border-radius: 13px; padding: 20px; margin-bottom: 20px; background: var(--surface-soft); }
+.assistant-panel h2, .assistant-panel h3, .assistant-panel h4, .assistant-panel p { margin: 0; }
+.assistant-panel textarea { width: 100%; min-width: 0; resize: vertical; border: 1px solid var(--hairline-strong); border-radius: 8px; padding: 10px; background: var(--surface-raised); color: var(--ink); }
+.assistant-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.assistant-preview { border-top: 1px solid var(--hairline); padding-top: 16px; overflow-wrap: anywhere; }
+.assistant-sessions { max-height: 280px; overflow-y: auto; margin: 0; padding-left: 20px; }
+.assistant-sessions li { margin-bottom: 10px; }
+.assistant-sessions span { display: block; color: var(--secondary-ink); }

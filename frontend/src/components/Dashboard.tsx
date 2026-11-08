@@ -30,6 +30,7 @@ import StudySessionModal from "./StudySessionModal";
 import WeeklyCalendar from "./WeeklyCalendar";
 import TimeShortagePanel from "./TimeShortagePanel";
 import ThemeToggle from "./ThemeToggle";
+import AssistantPanel from "./AssistantPanel";
 
 type Dialog =
   | { type: "assignment"; task?: Task }
@@ -333,6 +334,18 @@ export default function Dashboard() {
                     own schedule.
                   </p>
                 </div>
+              )}
+              {mode === "backend" && (
+                <AssistantPanel
+                  key={mode}
+                  schedule={schedule}
+                  onBusy={setBusy}
+                  onApply={(next) => {
+                    apply(next);
+                    setError("");
+                    setNotice("Commitment and revised study schedule applied.");
+                  }}
+                />
               )}
               {schedule.warnings.length > 0 && (
                 <TimeShortagePanel
