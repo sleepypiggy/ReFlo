@@ -121,3 +121,12 @@ From the repository root in PowerShell:
 .\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability test_schedule test_priorities
 .\backend\.venv\Scripts\python.exe demo_week.py
 ```
+
+## Optional Gemini assistant
+
+The teammate's `POST /assistant/parse` endpoint is registered on the same FastAPI
+app. Update dependencies, configure `GEMINI_API_KEY` in `backend/.env`, and restart
+when using it. Scheduling does not require a key. See
+[the assistant contract](../docs/ASSISTANT_API.md) for request/response examples,
+error behavior, and the remaining frontend preview work. Assistant tests mock
+provider responses; they do not perform live Gemini calls.

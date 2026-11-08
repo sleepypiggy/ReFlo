@@ -3,7 +3,7 @@ import {
   type Schedule,
   type Preferences,
   type StudyBlock,
-} from "@/datatypes";
+} from "../datatypes";
 import { duration, isPreserved, weekStart } from "./calendar";
 
 export const defaultPreferences: Preferences = {
@@ -81,6 +81,7 @@ export function createDemo(now = new Date()): Schedule {
     tasks,
     preferences: structuredClone(defaultPreferences),
     source: "demo",
+    needsReplan: false,
     events: [
       fixed("lecture-cs", "CPSC 210 · Lecture", 0, 9, 60, [1, 3, 5]),
       fixed("lecture-math", "MATH 200 · Lecture", 1, 11, 90, [2, 4]),
@@ -116,6 +117,7 @@ export function emptySchedule(): Schedule {
     studyBlocks: [],
     warnings: [],
     source: "backend",
+    needsReplan: false,
   };
 }
 

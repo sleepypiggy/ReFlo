@@ -103,7 +103,7 @@ after their start and before the assignment deadline, and not overlap other stud
 blocks or fixed commitments. Include an `unscheduled` array even when empty. Minutes
 must be nonnegative integers. New planned minutes plus unscheduled minutes must
 account for remaining work, allowing for any still-planned locked sessions that
-the backend treats as work reservations. Completed/unfinished blocks cannot consume
+the backend treats as work reservations. Completed/unfinished/skipped blocks cannot consume
 remaining work a second time.
 
 Both first generation and rescheduling use this endpoint. Validation, HTTP, network,
@@ -165,7 +165,7 @@ to real mode starts an empty independent workspace. FullCalendar only renders st
 - Wake-up/bedtime can cross midnight. Recurring events retain local wall-clock
   times across DST; overnight commitments reserve both local days.
 - Locked history is returned unchanged by frontend merging. Its occupied intervals
-  and breaks are reserved. Completed/unfinished entries do not reduce remaining
+  and breaks are reserved. Completed/unfinished/skipped entries do not reduce remaining
   minutes again; only the future portion of still-planned locked sessions reserves
   remaining work. Past planned sessions imply no completion.
 - Requests allow up to 200 tasks, 1,000 events and 2,000 locked blocks, with
@@ -177,3 +177,30 @@ to real mode starts an empty independent workspace. FullCalendar only renders st
 See [the dashboard request fixture](../examples/schedule-request.json).
 The sample dates are fixed for reproducibility; normal UI requests use its current
 clock. Run `npm run test:live` to verify the three scenarios against actual Python.
+
+## Progress, undo and backup behavior
+
+`locked_blocks.status` also accepts `skipped`. Skips keep their original ID and
+calendar interval, reserve the historical slot, and never reduce remaining work.
+Skipped intervals do not consume the daily study budget or add study-break padding.
+The frontend saves skip/unfinished reports before making the scheduling request,
+so a failed request does not lose them.
+
+After successful generation the UI compares task/time slots, ignoring regenerated
+IDs, to show moved, added and removed session counts. Undo restores the calendar
+from immediately before that request while retaining edits and progress reports.
+Undo is one level, available until the next edit, workspace switch or page refresh.
+It marks the restored plan as needing regeneration.
+
+Upcoming study time excludes elapsed sessions and only counts the future portion
+of in-progress planned sessions. Remaining work is the authoritative task total.
+Shortage totals come from the last successful plan, not historical calendar entries.
+
+JSON backups use `format: "schedule-maker-backup"`, `version: 1` and a `workspace`
+containing both demo/real workspaces. Restore validates dates, IDs, references,
+minutes and statuses and requires confirmation before replacing data.
+The limit is 5 MB. Restored plans are marked for regeneration; no accounts or
+remote storage are involved.
+
+Changes to inputs set a persisted `needsReplan` flag. Old shortages are labeled as
+belonging to the previous plan; regenerate to clear the badge and update totals.

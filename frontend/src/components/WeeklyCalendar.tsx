@@ -67,18 +67,20 @@ export default function WeeklyCalendar({
         color:
           block.status === "completed"
             ? "var(--surface-soft)"
-            : block.status === "unfinished"
+            : block.status === "unfinished" || block.status === "skipped"
               ? "var(--unfinished-bg)"
               : palette?.background ?? "var(--study-bg)",
         contrastColor:
           block.status === "completed"
             ? "var(--secondary-ink)"
-            : block.status === "unfinished"
+            : block.status === "unfinished" || block.status === "skipped"
               ? "var(--unfinished-ink)"
               : palette?.foreground ?? "var(--study-ink)",
         className:
           block.status === "completed"
             ? "calendar-event completed-event"
+            : block.status === "skipped"
+              ? "calendar-event skipped-event"
             : block.status === "unfinished"
               ? "calendar-event unfinished-event"
               : `calendar-event study-event${color ? " topic-study" : ""}`,
@@ -232,7 +234,7 @@ export default function WeeklyCalendar({
           </span>
           <span>
             <i className="orange" />
-            Unfinished
+            Unfinished / skipped
           </span>
         </div>
         <span className="muted small">Click a session to update progress</span>

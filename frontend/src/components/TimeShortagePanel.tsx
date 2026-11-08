@@ -31,14 +31,14 @@ export default function TimeShortagePanel({ schedule, demo }: {
           <ChevronDown size={16} className="shortage-chevron" aria-hidden="true" />
         </summary>
         <div className="shortage-content">
-      <p>
+      {schedule.needsReplan ? <p role="status">These shortages belong to the previous plan. Generate a schedule to update them.</p> : <p>
         You have <strong>{time(required)} of work</strong>
         {deadline && <> due by {deadline.toLocaleDateString(undefined, {
           weekday: "short", month: "short", day: "numeric", year: "numeric",
         })}</>}. Under your deadlines and preferences, the current plan fits{" "}
         <strong>{time(Math.max(0, required - missing))}</strong>;{" "}
         <strong>{time(missing)} remains unscheduled</strong>.
-      </p>
+      </p>}
       <ul className="shortage-breakdown">
         {schedule.warnings.map((warning, index) => (
           <li key={`${warning.taskId}-${index}`}>

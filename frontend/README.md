@@ -16,6 +16,16 @@ commitments to edit/delete; click study sessions to complete or report unfinishe
 work. Assignment deletion also removes its sessions after a confirmation. Updating
 inputs does not automatically regenerate the plan; use Generate Schedule.
 
+In **Real backend**, use **Schedule assistant** to describe a fixed commitment.
+It calls `POST /assistant/parse` with the current time and browser timezone. If
+details are missing, answer the displayed question; the original request is kept
+as context. An event draft is sent with your existing tasks, commitments,
+preferences, and locked history to `POST /schedule`. Review the revised sessions
+and shortage warnings, then click **Apply** to save the commitment and revised
+plan together. **Discard preview**, refresh, or later edits leave the draft unsaved.
+The assistant requires `GEMINI_API_KEY` in `backend/.env` (see
+`backend/.env.example`); demo mode remains independent of the assistant.
+
 Backend setup and JSON examples: [API_CONTRACT.md](API_CONTRACT.md).
 Validation results and design-check limitations: [VALIDATION.md](VALIDATION.md).
 The `/health` endpoint can be checked from the footer. FastAPI now implements
@@ -48,6 +58,43 @@ recipes. No authentication, database, drag-and-drop, or frontend scheduler is us
 From this directory, run `npm run test:live`. This starts isolated FastAPI (8100)
 and Next.js development (3101) servers and uses real browser HTTP requests, with
 no mocked scheduling responses. It verifies generation, unfinished work, a fixed
-shift causing a shortage, UTC/Vancouver rendering, and persistence after refresh.
+shift causing a shortage through assistant preview/Apply, UTC/Vancouver rendering,
+and persistence after refresh. The assistant model response is stubbed in this
+test; scheduling uses the real backend. The regular browser suite also covers
+clarification, discard, stale previews, malformed drafts, and API failures.
 The backend virtual environment and dependencies must already be installed.
 The test uses Microsoft Edge by default and closes both test servers afterward.
+
+## Planning controls and backups
+
+- Scheduling first tries to fit all work in deadline order. If it cannot, the
+  teammate's policy ranks work by grade weight multiplied by remaining work
+  relative to available study capacity. There is no manual priority override.
+- The saved **Plan needs updating** badge remains after changing inputs until real
+  backend generation succeeds. Demo mode continues to use authored sample data.
+- Generation shows moved, added and removed future sessions and unscheduled minutes.
+  **Undo last replan** restores the previous calendar while keeping task edits and
+  progress reports. It is one level and does not survive refresh.
+- **I Skipped** retains session history and remaining work, then replans. Failed
+  replanning preserves the report so Generate Schedule can retry.
+- Totals distinguish remaining work, upcoming planned time and unscheduled work.
+- **Export backup** and **Import backup** are in the footer on desktop and mobile.
+  Restore previews assignment counts and asks before replacing both workspaces.
+  Invalid files are rejected; import marks plans as needing regeneration.
+
+Pull requests and pushes to main run `.github/workflows/checks.yml`: Python tests,
+frontend unit tests, lint, TypeScript, build, browser regressions, and live Python
+integration. The workflow uses Chromium on Linux; local browser tests default to
+Microsoft Edge. GitHub-hosted execution occurs after the workflow is pushed.
+
+## Updated dashboard and theme
+
+Calendar and Assignments are separate navigation pages. Use Assignments for the
+remaining/upcoming/unscheduled totals and task editing; the calendar remains wide
+for month/week/day views. The sidebar theme toggle supports light/dark modes and
+remembers the selection separately from schedule data. Backup controls remain in
+the footer in both themes and on mobile.
+
+The backend now includes `/assistant/parse`, but an assistant input and a proposed
+schedule preview with Apply/Cancel are not yet part of this dashboard. See
+[assistant setup](../docs/ASSISTANT_API.md).
