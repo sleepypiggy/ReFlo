@@ -56,7 +56,9 @@ export default function EventForm({
   return (
     <form className="form-stack" onSubmit={submit}>
       <p className="muted">
-        Reserve time for classes, meals, work, and everything else.
+        Reserve time for classes, meals, work, and everything else. In Real backend
+        mode, overlapping future study sessions are automatically rescheduled;
+        your event stays at the time you choose.
       </p>
       <label>
         Event name

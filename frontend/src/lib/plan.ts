@@ -1,5 +1,12 @@
 import type { Schedule, StudyBlock } from "../datatypes";
-import { isPreserved } from "./calendar";
+import { expandEvents, isPreserved } from "./calendar";
+
+/** Fixed commitments win over movable future study, including weekly repeats. */
+export function hasStudyConflict(schedule: Schedule, now = new Date()) {
+  return schedule.studyBlocks.some(block => !isPreserved(block, now) &&
+    expandEvents(schedule.events, block.startTime, block.endTime).some(event =>
+      event.startTime < block.endTime && event.endTime > block.startTime));
+}
 
 export function upcomingMinutes(schedule: Schedule, now = new Date()) {
   return schedule.studyBlocks.filter(block => block.status === "planned").reduce((sum, block) =>

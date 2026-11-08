@@ -21,7 +21,7 @@ import { checkHealth, generateSchedule } from "@/lib/api";
 import { duration, hours } from "@/lib/calendar";
 import { demoResult } from "@/lib/mockData";
 import { loadWorkspace, saveWorkspace, exportBackup, importBackup, type Workspace } from "@/lib/storage";
-import { planChanges, upcomingMinutes } from "@/lib/plan";
+import { hasStudyConflict, planChanges, upcomingMinutes } from "@/lib/plan";
 import AssignmentForm from "./AssignmentForm";
 import AssignmentList from "./AssignmentList";
 import EventForm from "./EventForm";
@@ -106,7 +106,13 @@ export default function Dashboard() {
     setNotice("Saved. Generate a schedule to account for these changes.");
     setError("");
   };
-  async function scheduleWork(next = schedule) {
+  function eventsChanged(next: Schedule) {
+    changed(next);
+    if (mode === "backend" && hasStudyConflict(next)) {
+      void scheduleWork({ ...next, needsReplan: true }, true);
+    }
+  }
+  async function scheduleWork(next = schedule, eventReplan = false) {
     setBusy(true);
     setError("");
     setNotice("");
@@ -128,9 +134,9 @@ export default function Dashboard() {
       );
     } catch (error) {
       setError(
-        error instanceof Error
+        (eventReplan ? "Commitment saved. Automatic rescheduling failed. Use Generate Schedule to retry. " : "") + (error instanceof Error
           ? error.message
-          : "Scheduling failed. Your existing schedule is preserved.",
+          : "Scheduling failed. Your existing schedule is preserved."),
       );
     } finally {
       setBusy(false);
@@ -428,7 +434,7 @@ export default function Dashboard() {
                   </aside>
                 )}
               </div>
-              <CalendarFiles key={`calendar-files-${mode}`} schedule={schedule} onImport={changed} />
+              <CalendarFiles key={`calendar-files-${mode}`} schedule={schedule} onImport={eventsChanged} />
               {section === "assignments" && (
               <div className="stats-grid">
                 <div className="stat">
@@ -580,7 +586,7 @@ export default function Dashboard() {
                 event={dialog.event}
                 topics={schedule.topics}
                 onSave={(event, topics) =>
-                  changed({
+                  eventsChanged({
                     ...schedule,
                     topics,
                     events: schedule.events.some((item) => item.id === event.id)

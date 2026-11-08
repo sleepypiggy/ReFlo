@@ -3,10 +3,10 @@
 Current integrated application checks:
 
 - Python API, availability and dashboard scheduling: **91 tests passed**.
-- Frontend calendar, task, topic, plan-accounting and backup validation: **55 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **57 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **16 passed** in Microsoft Edge against the production build.
+- `npm run test:e2e`: **17 passed** in Microsoft Edge against the production build.
 - `npm run test:live`: **6 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
@@ -79,3 +79,10 @@ Minimum session regressions verify 15-minute dashboard blocks, uneven 60 + 45
 and redistributed short tails, small gap avoidance, daily balancing, and honest
 shortage reporting when a valid minimum block cannot fit. The priority oracle
 uses 15-minute slots to reflect the new scheduling constraint.
+
+Automatic commitment replanning is verified for manual event creation and edits,
+weekly occurrence conflict detection, and imported calendar commitments. Live
+browser checks keep the selected event times unchanged while study sessions
+move. A network-failure regression preserves the saved event, assignments and
+study history across refresh, then verifies successful manual retry. Boundary
+touching and preserved historical/locked entries do not trigger automatic moves.

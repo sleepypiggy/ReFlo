@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Task, type StudyBlock } from "./datatypes";
 import { initialWorkspace, exportBackup, importBackup } from "./lib/storage";
-import { upcomingMinutes, planChanges } from "./lib/plan";
+import { hasStudyConflict, upcomingMinutes, planChanges } from "./lib/plan";
 
 const now = new Date("2026-11-10T10:00:00Z");
 const block = (id: string, start: string, end: string, status: StudyBlock["status"] = "planned"): StudyBlock =>
@@ -14,6 +14,28 @@ function schedule() {
 }
 
 describe("plan accounting", () => {
+  it("detects future commitment overlaps, including later weekly occurrences", () => {
+    const plan = schedule();
+    plan.studyBlocks = [block("future", "2026-11-17T11:00:00Z", "2026-11-17T12:00:00Z")];
+    const startTime = new Date("2026-11-10T11:30:00Z");
+    plan.events = [{ id: "work", name: "Work", startTime, endTime: new Date("2026-11-10T12:30:00Z"),
+      timeMinutes: 60, remainingTimeMinutes: 60, repeatOn: [startTime.getDay() as 2] }];
+    assert.equal(hasStudyConflict(plan, now), true);
+    plan.events[0].repeatOn = [];
+    assert.equal(hasStudyConflict(plan, now), false);
+  });
+  it("allows touching boundaries and preserves started, locked and historical entries", () => {
+    const plan = schedule();
+    plan.events = [{ id: "work", name: "Work", startTime: new Date("2026-11-10T09:00:00Z"),
+      endTime: new Date("2026-11-10T11:00:00Z"), timeMinutes: 120, remainingTimeMinutes: 120 }];
+    plan.studyBlocks = [block("future", "2026-11-10T11:00:00Z", "2026-11-10T12:00:00Z"),
+      block("started", "2026-11-10T09:30:00Z", "2026-11-10T10:30:00Z"),
+      { ...block("locked", "2026-11-10T10:15:00Z", "2026-11-10T10:45:00Z"), locked: true },
+      block("completed", "2026-11-10T10:15:00Z", "2026-11-10T10:45:00Z", "completed")];
+    assert.equal(hasStudyConflict(plan, now), false);
+    plan.events[0].endTime = new Date("2026-11-10T11:01:00Z");
+    assert.equal(hasStudyConflict(plan, now), true);
+  });
   it("counts only the future portion of planned sessions", () => {
     const plan = schedule();
     plan.studyBlocks = [

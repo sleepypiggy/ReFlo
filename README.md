@@ -58,6 +58,11 @@ New study sessions have a 15-minute minimum. Session lengths can vary (for
 example, 60 + 45 minutes); small gaps are skipped rather than turned into tiny
 sessions. Any work that cannot fit under these limits is shown as unscheduled.
 
+In Real backend mode, adding, editing or importing a fixed event that overlaps
+future study automatically regenerates the plan. Event times stay fixed; study
+sessions move around them. Past, started and locked entries are preserved. If
+replanning fails, the event remains saved and Generate Schedule retries the plan.
+
 ## API Integration
 
 The optional Gemini `POST /assistant/parse` endpoint is also integrated. See

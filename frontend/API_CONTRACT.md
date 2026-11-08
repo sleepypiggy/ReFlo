@@ -206,6 +206,18 @@ remote storage are involved.
 Changes to inputs set a persisted `needsReplan` flag. Old shortages are labeled as
 belonging to the previous plan; regenerate to clear the badge and update totals.
 
+## Fixed events and automatic replanning
+
+In Real backend mode, saving or importing commitments checks for overlaps with
+movable future study blocks, including weekly event occurrences. When there is
+an overlap, the browser saves the event and automatically calls `POST /schedule`
+with the updated fixed commitments. Event times are not changed. Existing history,
+started sessions and locked entries stay preserved. Shortages use the normal
+`unscheduled` response. If the request fails, the event and previous study blocks
+remain saved, the plan stays marked for updating, and Generate Schedule retries.
+Non-overlapping changes retain the manual generation flow; Demo mode still uses
+authored sample blocks. Assistant changes continue to require preview and Apply.
+
 ## Study spacing
 
 New `/schedule` study blocks are at least **15 minutes**, whether spacing is

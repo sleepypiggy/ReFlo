@@ -74,12 +74,12 @@ export default function CalendarFiles({ schedule, onImport }: { schedule: Schedu
               </span>
             </label>)}
           </div>
-          <p className="muted small">Imported occurrences become fixed commitments. Generate Schedule afterward to avoid them. Cancelled occurrences are omitted; moved occurrences use their updated times. Repeated imports skip existing identifiers; they do not synchronize edits or deletions.</p>
+          <p className="muted small">Imported occurrences become fixed commitments. In Real backend mode, overlapping future study sessions are automatically rescheduled. Cancelled occurrences are omitted; moved occurrences use their updated times. Repeated imports skip existing identifiers; they do not synchronize edits or deletions.</p>
           <button className="button primary" disabled={!count || loading} onClick={() => {
             try {
               const next = importCalendarEvents(schedule, available.filter(event => selected.has(event.id)));
               onImport(next); setSelected(new Set()); setError("");
-              setSuccess(`Imported ${next.events.length - schedule.events.length} commitments. Generate Schedule to update your plan.`);
+              setSuccess(`Imported ${next.events.length - schedule.events.length} commitments.`);
             } catch (error) { setError(error instanceof Error ? error.message : "Import failed."); }
           }}>Import {count} selected commitments</button>
         </>}
