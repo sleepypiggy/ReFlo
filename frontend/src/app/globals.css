@@ -358,6 +358,13 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   .sidebar-actions { margin: 0; padding: 0; border: 0; }
   .calendar-scroll { overflow-x: auto; }
   .calendar-scroll .calendar-timeGridWeek { min-width: 770px; }
+  .assignment-panel .assignments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .sidebar { grid-template-columns: minmax(0, 1fr) auto; }
+  .sidebar nav { grid-column: 1; grid-row: 1; }
+  .sidebar-bottom { grid-column: 2; grid-row: 1; }
+  .sidebar-actions { grid-column: 1 / -1; grid-row: 2; }
 }
 @media (max-width: 600px) {
   .topbar { flex-wrap: wrap; gap: 13px; padding: 17px; }
