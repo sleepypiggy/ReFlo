@@ -42,6 +42,7 @@ export default function EventForm({
     }
     onSave({
       id: fixed?.id ?? crypto.randomUUID(),
+      calendarImport: fixed?.calendarImport,
       name,
       startTime,
       endTime,

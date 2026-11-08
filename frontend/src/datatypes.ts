@@ -61,6 +61,8 @@ export interface Event {
   remainingTimeMinutes: number;
   /** When set, repeat weekly on these days at the original local times. */
   repeatOn?: Weekday[];
+  /** Imported occurrences are finite UTC instants, never local repeatOn rules. */
+  calendarImport?: { uid: string; recurrenceId?: string; timezone: string };
   topicId?: string;
   color?: TopicColor;
 }

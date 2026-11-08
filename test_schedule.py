@@ -31,6 +31,21 @@ def minutes(blocks):
 
 
 class DashboardApiTests(unittest.TestCase):
+    def test_imported_occurrences_reserve_exact_utc_instants(self):
+        # Calendar imports expand weekly rules and exceptions before /schedule.
+        # A moved class keeps its occurrence ID but sends the replacement time.
+        self.payload["events"] = [
+            {"id": "ics-original-occurrence", "title": "Imported class", "start": "2026-11-10T09:00:00Z",
+             "end": "2026-11-10T10:30:00Z", "repeat_on": []},
+            {"id": "ics-moved-occurrence", "title": "Moved class", "start": "2026-11-11T10:00:00Z",
+             "end": "2026-11-11T11:00:00Z", "repeat_on": []},
+        ]
+        data = self.plan()
+        self.assertTrue(data["study_blocks"])
+        for block in data["study_blocks"]:
+            for event in self.payload["events"]:
+                self.assertFalse(dt(block["start"]) < dt(event["end"]) and dt(block["end"]) > dt(event["start"]))
+
     def setUp(self):
         self.client = TestClient(app)
         self.payload = request_payload()

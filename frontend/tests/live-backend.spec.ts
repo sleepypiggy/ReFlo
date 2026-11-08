@@ -1,5 +1,32 @@
 import { test, expect, type Page } from "@playwright/test";
 
+test.describe("calendar files with the scheduler", () => {
+  test.use({ timezoneId: "UTC" });
+  test("calendar import reserves commitments before real scheduling and export", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
+    await page.addInitScript(() => {
+      const schedule = { weekStart: "2026-11-09T00:00:00Z", source: "backend", tasks: [{ id: "essay", name: "Calendar integration essay", estimatedTimeMinutes: 120, remainingTimeMinutes: 120, deadline: "2026-11-10T12:00:00Z", gradeWeight: 20 }], events: [], studyBlocks: [], warnings: [], preferences: { maxStudyTimeMinutes: 240, maxSessionTimeMinutes: 60, breakDurationMinutes: 0, sleepHours: { wakeUpTime: "09:00", bedtime: "12:00" } } };
+      if (!localStorage.getItem("schedule-maker:v1")) localStorage.setItem("schedule-maker:v1", JSON.stringify({ mode: "backend", backend: schedule, demo: { ...schedule, source: "demo" } }));
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Import calendar (.ics)" }).click();
+    await page.getByLabel("Calendar file (.ics)").setInputFiles({ name: "class.ics", mimeType: "text/calendar", buffer: Buffer.from("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:integration-class\r\nSUMMARY:Imported lecture\r\nDTSTART:20261110T090000Z\r\nDTEND:20261110T100000Z\r\nRRULE:FREQ=WEEKLY;COUNT=2\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n") });
+    await expect(page.getByRole("dialog")).toContainText("2 new occurrences");
+    await page.getByRole("button", { name: "Import 2 selected commitments" }).click();
+    await expect(page.getByRole("dialog")).toContainText("Imported 2 commitments");
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    const response = page.waitForResponse(r => r.url().endsWith("/schedule") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+    const result = await (await response).json();
+    expect(result.unscheduled).toEqual([]);
+    expect(result.study_blocks.map((block: { start: string }) => block.start)).toEqual(["2026-11-10T10:00:00Z", "2026-11-10T11:00:00Z"]);
+    await expect(page.getByText("Plan needs updating.")).toHaveCount(0);
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export study calendar" }).click();
+    expect((await download).suggestedFilename()).toBe("schedule-maker-study.ics");
+  });
+});
+
 // Real browser requests go through CORS to a separate FastAPI process. No API
 // scheduling routes are intercepted. Only the assistant model output is stubbed
 // in the preview step. Fixed commitments leave exactly the prototype windows.

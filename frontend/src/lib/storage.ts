@@ -100,6 +100,14 @@ function revive(value: Schedule): Schedule {
         throw new Error("Invalid saved event");
       positive(event.timeMinutes);
       positive(event.remainingTimeMinutes, true);
+      if (event.calendarImport !== undefined) {
+        const source = event.calendarImport;
+        if (!source || typeof source.uid !== "string" || !source.uid.trim() || typeof source.timezone !== "string" ||
+            (source.recurrenceId !== undefined && typeof source.recurrenceId !== "string"))
+          throw new Error("Invalid imported calendar identity");
+        new Intl.DateTimeFormat("en", { timeZone: source.timezone });
+        if (source.recurrenceId) date(source.recurrenceId as unknown as Date);
+      }
       return { ...event, startTime, endTime, topicId: topics.some((topic) => topic.id === event.topicId) ? event.topicId : undefined };
     }),
     studyBlocks: value.studyBlocks.map((block) => {

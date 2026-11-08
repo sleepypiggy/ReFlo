@@ -17,6 +17,9 @@ test("theme toggles and persists without changing schedule data", async ({ page 
   await expect(page.locator(".assignment-panel")).toBeVisible();
   await expect(page.locator(".stats-grid")).toBeVisible();
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
+  // Finish saved-workspace schema migration before comparing theme-only changes.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible();
   await page.waitForFunction(() => localStorage.getItem("schedule-maker:v1"));
   const workspace = await page.evaluate(() => localStorage.getItem("schedule-maker:v1"));
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
