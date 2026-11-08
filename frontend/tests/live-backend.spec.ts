@@ -243,9 +243,11 @@ test("weighted pressure controls shortage, tied scores use deadline, and edits p
   await expect(panel.locator("details")).not.toHaveAttribute("open", "");
   await panel.locator("summary").click();
   await expect(panel.locator("details")).toHaveAttribute("open", "");
-  await expect(panel).toContainText("6h of work");
-  await expect(panel).toContainText("current plan fits 4h");
-  await expect(panel).toContainText("2h remains unscheduled");
+  await expect(panel).toContainText("Math needs 3 hours; 1 hour is scheduled; 2 hours remain unscheduled.");
+  const initialPlan = await savedPlan(page);
+  expect(initialPlan.tasks.reduce((sum: number, task: { remainingTimeMinutes: number }) => sum + task.remainingTimeMinutes, 0)).toBe(360);
+  expect(initialPlan.studyBlocks.filter((block: { status: string }) => block.status === "planned")
+    .reduce((sum: number, block: { startTime: string; endTime: string }) => sum + (Date.parse(block.endTime) - Date.parse(block.startTime)) / 60000, 0)).toBe(240);
   expect((await savedPlan(page)).warnings[0]).toMatchObject({ taskId: "math", unscheduledMinutes: 120 });
   async function editWeight(weight: string) {
     await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
