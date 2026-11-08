@@ -9,6 +9,26 @@ Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in your local `frontend/.env.loc
 `GET /health` must return `{"status":"ok"}`; use **Test backend** in the footer.
 FastAPI currently permits browser origins localhost:3000 and 127.0.0.1:3000.
 
+## Informational shortage suggestions
+
+In the real workspace, **Check daily-limit suggestions** calls the same `/schedule`
+endpoint and response validator without saving any returned plan. It first checks
+the current limit, then tests increases of 30, 60, and 120 minutes (capped at 1440).
+All calls share the same current time and a 12-second request budget. Only the daily
+limit changes; tasks, estimates, deadlines, commitments, sleep, protected sessions,
+breaks, session limits, and scheduling policy remain unchanged.
+
+Each assignment's suggestion reports verified minute gains, dated changes, remaining
+shortages, and any other assignment losing time. Alternatives are checked separately;
+their effects must not be added together. A successful trial does not establish the
+original shortage's sole cause. Prefer results with fewer lost minutes, then more
+minutes recovered, retaining the lower tested limit on ties.
+
+Suggestions are temporary UI state. Relevant edits invalidate them and cancel pending
+requests; results expire after five minutes or when a planned session begins. Stale
+shortages require regeneration. Failed or inconsistent responses publish no suggestions
+and leave the saved plan unchanged. Demo mode keeps its authored shortage panel.
+
 ## Request: POST /schedule
 
 ```json
@@ -65,6 +85,10 @@ FastAPI currently permits browser origins localhost:3000 and 127.0.0.1:3000.
   An overnight recurring event ends the following local day.
   Optional `exclude_starts` lists UTC occurrence starts to omit from a weekly series.
   Moving one occurrence excludes its original start and adds a one-off commitment.
+- Wake-up time must be `06:00` or later. New study blocks and manual study moves
+  stay within 06:00–midnight in the local timezone, including with overnight waking
+  preferences. Earlier saved wake-up times are upgraded to 06:00 and flagged for
+  regeneration; existing history is retained.
 - `remaining_minutes` is authoritative and already reflects completed work. It can
   exceed the original estimate. Do not subtract historical sessions from it again.
 - `locked_blocks` includes every manually moved, completed, unfinished, explicitly locked, past,
@@ -144,18 +168,28 @@ to real mode starts an empty independent workspace. FullCalendar only renders st
   Pressure scores are calculated once per request, not after each admission.
   Response ordering and generated IDs are deterministic and independent of task
   input order. There is no separate manual priority field.
-- Tradeoffs: without breaks, divisible whole-minute work with a common release
-  time admits a complete earliest-deadline allocation whenever one exists in the
-  rounded available capacity. With nonzero breaks, task boundaries and fragmented
-  windows introduce packing effects: this greedy feasibility check can miss a
-  feasible arrangement. Binary search assumes monotonic packing feasibility;
-  break placement can violate that assumption and leave capacity unused. The
+- Tradeoffs: earliest-deadline allocation is complete for divisible work with a
+  common release time and no breaks. The 15-minute block minimum means small
+  remainders are **not divisible work**: even without breaks, fragmented windows
+  can defeat greedy packing. Exact comparisons cover full feasibility on aligned
+  15-minute slots (session maximum 15; demands, daily limits and boundaries all
+  multiples of 15), and feasibility plus priority admission on one contiguous
+  same-day interval without breaks or required session splitting. These checks
+  do not imply completeness for general dashboard requests.
+  With nonzero breaks, task boundaries and fragmented windows introduce further
+  packing effects: this greedy feasibility check can miss a feasible arrangement.
+  Binary search assumes monotonic packing feasibility; break placement and the
+  minimum/maximum session lengths can violate that assumption and leave capacity
+  unused. Standalone capacity is also a heuristic packing result, not an exact
+  maximum; redistributing a short tail may underestimate it. The
   shortage policy prioritizes admitted minutes, not completed-task grade value,
   total throughput, or fairness, and does not guarantee a globally optimal plan.
   It uses the standard library and existing session engine; cached free windows
   avoid repeated event expansion. In shortage cases, up to one standalone trial
   and `1 + ceil(log2(remaining_minutes + 1))` admission trials per task may be
   needed, each repacking accepted work; large fragmented requests cost more.
+  See [scheduler verification](../docs/SCHEDULER_VERIFICATION.md) for fixed-seed
+  invariants, the independent bounded reference solver and measured counterexamples.
 - The shortage panel compares total remaining demand with the minutes covered by
   the current plan and lists unscheduled minutes for each affected task. These
   are allocations under the current weights and constraints, not a claim of
@@ -233,8 +267,17 @@ length: 105 minutes can become 60 + 45, and 68 minutes can become 53 + 15.
 Small gaps are skipped and daily balancing may use uneven blocks to avoid tiny
 remainders. Fixed events, breaks, deadlines and maximum study limits still apply.
 Minutes that cannot fit in a valid block remain in `unscheduled`; work is never
-rounded up. This includes assignments with fewer than 15 minutes remaining or a
-configured session maximum below 15 minutes. Existing locked history is preserved.
+rounded up. Assignments with fewer than 15 minutes remaining are valid and receive
+a specific explanation that their unscheduled work is below the block minimum.
+Existing locked history is preserved.
+
+`preferences.max_session_minutes` must be an integer from 15 through 1440.
+Values below 15 return HTTP 400 with a field-level detail at
+`body.preferences.max_session_minutes`. Preferences enforces the same minimum
+and explains why. Loading saved workspaces or importing version 1 backups with
+older positive session limits below 15 normalizes those limits to 15 and marks
+the affected plan `needsReplan`, preserving assignments, estimates and history.
+Backup imports continue to mark both plans as needing regeneration.
 The legacy single-assignment `/api/plan` prototype retains its original behavior.
 
 `preferences.spread_assignments` is optional and defaults to `true`. The frontend

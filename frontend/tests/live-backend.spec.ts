@@ -35,6 +35,92 @@ async function savedPlan(page: Page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend);
 }
 
+test.describe("personalized study advice", () => {
+  test.use({ timezoneId: "UTC" });
+  test("saved wake-up changes real recommendations; stale and empty plans remain read-only", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-11-10T06:00:00Z"));
+    await page.addInitScript(() => {
+      if (localStorage.getItem("schedule-maker:v1")) return;
+      const plan = {
+        weekStart: "2026-11-09T00:00:00Z", source: "backend", needsReplan: true,
+        tasks: [{ id: "stats", name: "Statistics", estimatedTimeMinutes: 30,
+          remainingTimeMinutes: 30, deadline: "2026-11-10T10:00:00Z", gradeWeight: 20 }],
+        events: [], warnings: [], studyBlocks: [],
+        preferences: { maxStudyTimeMinutes: 120, maxSessionTimeMinutes: 60,
+          breakDurationMinutes: 15, spreadAssignments: false,
+          sleepHours: { wakeUpTime: "07:00", bedtime: "22:00" } },
+      };
+      localStorage.setItem("schedule-maker:v1", JSON.stringify({ mode: "backend", backend: plan, demo: { ...plan, source: "demo" } }));
+    });
+    let apiCalls = 0;
+    page.on("request", request => { if (/\/(schedule|assistant\/(chat|parse))$/.test(request.url())) apiCalls++; });
+    await page.goto("/");
+    const advice = page.getByRole("region", { name: "Study advice", exact: true });
+    const ask = async () => {
+      await expect(page.getByRole("button", { name: "What should I study next?", exact: true })).toBeVisible();
+      // Let normal workspace hydration finish before taking a read-only snapshot.
+      await expect.poll(async () => (await savedPlan(page)).topics).toEqual([]);
+      const before = await savedPlan(page), calls = apiCalls;
+      await page.getByRole("button", { name: "What should I study next?", exact: true }).click();
+      await expect(advice).toBeVisible();
+      expect(await savedPlan(page)).toEqual(before);
+      expect(apiCalls).toBe(calls);
+    };
+    const generate = async () => {
+      const response = page.waitForResponse(r => r.url().endsWith("/schedule") && r.request().method() === "POST");
+      await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+      const result = await response;
+      expect(result.status()).toBe(200);
+      await expect(page.locator(".plan-dirty")).toHaveCount(0);
+      return result.json();
+    };
+    await ask();
+    await expect(advice).toContainText("Generate a fresh schedule");
+    const first = await generate();
+    expect(first.study_blocks[0].start).toBe("2026-11-10T07:00:00Z");
+    await ask();
+    await expect(advice).toContainText("Statistics");
+    await expect(advice).toContainText(/7:00\s*a\.?m\.?/i);
+    await expect(advice).toContainText("30 minutes");
+    await page.getByRole("button", { name: "Preferences", exact: true }).click();
+    await page.getByLabel("Wake-up time").fill("08:00");
+    await page.getByRole("button", { name: "Save preferences" }).click();
+    await ask();
+    await expect(advice).toContainText("Generate a fresh schedule");
+    const revised = await generate();
+    expect(revised.study_blocks[0].start).toBe("2026-11-10T08:00:00Z");
+    expect((await savedPlan(page)).preferences.sleepHours.wakeUpTime).toBe("08:00");
+    await ask();
+    await expect(advice).toContainText(/8:00\s*a\.?m\.?/i);
+    await expect(advice).toContainText(/8:30\s*a\.?m\.?/i);
+    await expect(advice).toContainText("Nov 10, 2026");
+    await expect(advice).toContainText("saved 60-minute session limit");
+
+    // A known shortage is separate from a valid upcoming recommendation.
+    await page.evaluate(() => {
+      const workspace = JSON.parse(localStorage.getItem("schedule-maker:v1")!);
+      workspace.backend.tasks[0].estimatedTimeMinutes = 45;
+      workspace.backend.tasks[0].remainingTimeMinutes = 45;
+      workspace.backend.warnings = [{ taskId: "stats", unscheduledMinutes: 15, reason: "No space" }];
+      localStorage.setItem("schedule-maker:v1", JSON.stringify(workspace));
+    });
+    await page.reload();
+    await ask();
+    await expect(advice).toContainText(/8:00\s*a\.?m\.?/i);
+    await expect(advice.getByRole("region", { name: "Advice unscheduled work" })).toContainText("Statistics: 15 minutes unscheduled.");
+    await page.evaluate(() => {
+      const workspace = JSON.parse(localStorage.getItem("schedule-maker:v1")!);
+      workspace.backend.studyBlocks = [];
+      workspace.backend.warnings[0].unscheduledMinutes = 45;
+      localStorage.setItem("schedule-maker:v1", JSON.stringify(workspace));
+    });
+    await page.reload();
+    await ask();
+    await expect(advice).toContainText("There is no upcoming planned study session");
+    await expect(advice).toContainText("Statistics: 45 minutes unscheduled.");
+  });
+});
+
 test.describe("fixed event impact preview", () => {
   test.use({ timezoneId: "UTC" });
   test("partial fit shows removed and added slots and commits only after Apply", async ({ page }) => {
@@ -243,9 +329,11 @@ test("weighted pressure controls shortage, tied scores use deadline, and edits p
   await expect(panel.locator("details")).not.toHaveAttribute("open", "");
   await panel.locator("summary").click();
   await expect(panel.locator("details")).toHaveAttribute("open", "");
-  await expect(panel).toContainText("6h of work");
-  await expect(panel).toContainText("current plan fits 4h");
-  await expect(panel).toContainText("2h remains unscheduled");
+  await expect(panel).toContainText("Math needs 3 hours; 1 hour is scheduled; 2 hours remain unscheduled.");
+  const initialPlan = await savedPlan(page);
+  expect(initialPlan.tasks.reduce((sum: number, task: { remainingTimeMinutes: number }) => sum + task.remainingTimeMinutes, 0)).toBe(360);
+  expect(initialPlan.studyBlocks.filter((block: { status: string }) => block.status === "planned")
+    .reduce((sum: number, block: { startTime: string; endTime: string }) => sum + (Date.parse(block.endTime) - Date.parse(block.startTime)) / 60000, 0)).toBe(240);
   expect((await savedPlan(page)).warnings[0]).toMatchObject({ taskId: "math", unscheduledMinutes: 120 });
   async function editWeight(weight: string) {
     await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();

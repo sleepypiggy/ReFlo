@@ -11,7 +11,6 @@ from fastapi import APIRouter
 from pydantic import AwareDatetime, BeforeValidator, Field, StrictBool, StrictInt, model_validator
 
 from .api import InputModel, local_time, timezone_name
-from .availability import available_study_windows
 from .scheduler import Assignment, Window, schedule_assignment
 
 router = APIRouter(tags=["Dashboard scheduling"])
@@ -85,12 +84,14 @@ class PreferencesInput(InputModel):
     wake_up_time: Clock
     bedtime: Clock
     max_daily_study_minutes: DailyMinutes
-    max_session_minutes: DailyMinutes
+    max_session_minutes: Annotated[StrictInt, Field(ge=15, le=1440)]
     break_minutes: Annotated[StrictInt, Field(ge=0, le=1440)]
     spread_assignments: StrictBool = True
 
     @model_validator(mode="after")
     def different_hours(self):
+        if self.wake_up_time < time(6):
+            raise ValueError("Wake-up time must be 06:00 or later")
         if self.wake_up_time == self.bedtime:
             raise ValueError("Wake-up and bedtime must differ")
         return self
@@ -234,19 +235,19 @@ def _allocate(
         while remaining and day <= last_day:
             midnight = wall(day, time.min, zone)
             next_midnight = wall(day + timedelta(days=1), time.min, zone)
-            day_start, day_end = max(now, midnight), min(task.deadline, next_midnight)
+            day_start, day_end = max(now, wall(day, time(6), zone)), min(task.deadline, next_midnight)
             if day_start < day_end:
-                # Calculate normal waking hours with the teammate's function.
+                # Compare instants in UTC: local datetime ordering ignores fold
+                # when both endpoints share a ZoneInfo at the fall-back hour.
                 # Overnight waking hours are split around local midnight.
                 wake, bed = preferences.wake_up_time, preferences.bedtime
                 key = (day_start, day_end)
                 if key in availability:
                     windows = availability[key]
                 elif wake < bed:
-                    local_windows = available_study_windows(
-                        day_start.astimezone(zone), day_end.astimezone(zone), wake, bed, [],
-                    )
-                    windows = [Window(item.start.astimezone(UTC), item.end.astimezone(UTC)) for item in local_windows]
+                    windows = [Window(max(day_start, wall(day, wake, zone)),
+                                      min(day_end, wall(day, bed, zone)))]
+                    windows = [item for item in windows if item.start < item.end]
                 else:
                     windows = [Window(day_start, min(day_end, wall(day, bed, zone))),
                                Window(max(day_start, wall(day, wake, zone)), day_end)]
@@ -307,11 +308,11 @@ def _space_dayparts(request: ScheduleRequest, blocks: list[tuple[str, datetime, 
     for day, original in sorted(grouped.items()):
         midnight = wall(day, time.min, zone)
         tomorrow = wall(day + timedelta(days=1), time.min, zone)
-        start, end = max(now, midnight), tomorrow
+        start, end = max(now, wall(day, time(6), zone)), tomorrow
         wake, bed = preferences.wake_up_time, preferences.bedtime
         if wake < bed:
-            windows = [Window(item.start.astimezone(UTC), item.end.astimezone(UTC))
-                       for item in available_study_windows(start.astimezone(zone), end.astimezone(zone), wake, bed, [])]
+            windows = [Window(max(start, wall(day, wake, zone)), min(end, wall(day, bed, zone)))]
+            windows = [window for window in windows if window.start < window.end]
         else:
             windows = [Window(start, min(end, wall(day, bed, zone))),
                        Window(max(start, wall(day, wake, zone)), end)]
@@ -440,6 +441,78 @@ def _spread(request: ScheduleRequest, packed: list[tuple[str, datetime, datetime
     return _space_dayparts(request, chosen, availability)
 
 
+def _tidy_durations(request: ScheduleRequest, blocks: list[tuple[str, datetime, datetime]], availability: dict):
+    """Prefer five-minute durations without changing task totals or start times.
+
+    Transfer at most four minutes between two new sessions of the same task.
+    Keep exact odd totals and constrained placements when rounding cannot fit.
+    Locked history is never changed.
+    """
+    result = list(blocks)
+    zone = ZoneInfo(request.timezone)
+    preferences = request.preferences
+    tasks = {task.id: task for task in request.tasks}
+    pause = timedelta(minutes=preferences.break_minutes)
+    fixed = availability.get("fixed", [])
+    history = [Window(block.start - (pause if block.status != "skipped" else timedelta()),
+                      block.end + (pause if block.status != "skipped" else timedelta()))
+               for block in request.locked_blocks]
+
+    def valid_extension(index):
+        task_id, start, end = result[index]
+        day = start.astimezone(zone).date()
+        midnight = wall(day, time.min, zone)
+        tomorrow = wall(day + timedelta(days=1), time.min, zone)
+        wake, bed = preferences.wake_up_time, preferences.bedtime
+        if wake < bed:
+            waking = [Window(wall(day, wake, zone), wall(day, bed, zone))]
+        else:
+            waking = [Window(midnight, wall(day, bed, zone)),
+                      Window(wall(day, wake, zone), tomorrow)]
+        if end > tasks[task_id].deadline or not any(window.start <= start < end <= window.end for window in waking):
+            return False
+        occupied = fixed + history + [Window(other_start - pause, other_end + pause)
+                                     for other_index, (_, other_start, other_end) in enumerate(result)
+                                     if other_index != index]
+        if any(window.start < end and window.end > start for window in occupied):
+            return False
+        used = sum(minutes_in_day(Window(other_start, other_end), midnight, tomorrow)
+                   for _, other_start, other_end in result)
+        used += sum(minutes_in_day(Window(block.start, block.end), midnight, tomorrow)
+                    for block in request.locked_blocks if block.status != "skipped")
+        return used <= preferences.max_daily_study_minutes
+
+    for index in range(len(result)):
+        task_id, start, end = result[index]
+        duration = int((end - start) // MINUTE)
+        remainder = duration % 5
+        if not remainder:
+            continue
+        # Prefer the smallest adjustment, rounding down on equal distance.
+        for delta in sorted((-remainder, 5 - remainder), key=lambda value: (abs(value), value)):
+            if not 15 <= duration + delta <= preferences.max_session_minutes:
+                continue
+            adjusted = False
+            for other_index, other in enumerate(result):
+                other_task, other_start, other_end = other
+                other_duration = int((other_end - other_start) // MINUTE)
+                if other_index == index or other_task != task_id or other_duration % 5 == 0:
+                    continue
+                if not 15 <= other_duration - delta <= preferences.max_session_minutes:
+                    continue
+                result[index] = (task_id, start, end + delta * MINUTE)
+                result[other_index] = (task_id, other_start, other_end - delta * MINUTE)
+                # Shortening is always safe; validate only the extended session.
+                if valid_extension(index if delta > 0 else other_index):
+                    adjusted = True
+                    break
+                result[index] = (task_id, start, end)
+                result[other_index] = other
+            if adjusted:
+                break
+    return result
+
+
 @router.post("/schedule", response_model=ScheduleResponse)
 def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
     """Try all work in deadline order, then admit work by weighted pressure.
@@ -504,6 +577,7 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
         output = _allocate(request, admitted, availability)
 
     output = _spread(request, output, availability)
+    output = _tidy_durations(request, output, availability)
     used_ids = {block.id for block in request.locked_blocks}
     result = []
     for task_id, start, end in sorted(output, key=lambda block: (block[1], block[0], block[2])):
@@ -518,6 +592,9 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
         result.append(ScheduledBlock(id=identifier, task_id=task_id, start=start, end=end))
     scheduled = _totals(output)
     warnings = [Shortage(task_id=task.id, minutes=demand[task.id] - scheduled.get(task.id, 0),
-                        reason="Work could not be placed before the deadline with a 15-minute minimum study block under your preferences and priority policy.")
+                        reason=("Remaining unscheduled work is below the 15-minute minimum study block; "
+                                "your work estimate has not been rounded up."
+                                if demand[task.id] - scheduled.get(task.id, 0) < 15 else
+                                "Work could not be placed before the deadline with a 15-minute minimum study block under your preferences and priority policy."))
                 for task in tasks if demand[task.id] > scheduled.get(task.id, 0)]
     return ScheduleResponse(study_blocks=result, unscheduled=warnings)

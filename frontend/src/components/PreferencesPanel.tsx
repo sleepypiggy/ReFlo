@@ -17,6 +17,14 @@ export default function PreferencesPanel({
     const breakDurationMinutes = Number(data.get("break"));
     const bedtime = String(data.get("bedtime")),
       wakeUpTime = String(data.get("wake"));
+    if (wakeUpTime < "06:00") {
+      setError("Wake-up time must be 6:00 a.m. or later.");
+      return;
+    }
+    if (!Number.isInteger(maxSessionTimeMinutes) || maxSessionTimeMinutes < 15) {
+      setError("Maximum session length must be at least 15 minutes.");
+      return;
+    }
     if (bedtime === wakeUpTime || maxSessionTimeMinutes > maxStudyTimeMinutes) {
       setError(
         "Wake-up and bedtime must differ. A session cannot exceed the daily study limit.",
@@ -42,6 +50,7 @@ export default function PreferencesPanel({
           <input
             name="wake"
             type="time"
+            min="06:00"
             required
             defaultValue={preferences.sleepHours.wakeUpTime}
           />
@@ -56,6 +65,7 @@ export default function PreferencesPanel({
           />
         </label>
       </div>
+      <p className="muted small">Study sessions can run from 6:00 a.m. to midnight, including with overnight sleep preferences.</p>
       <label>
         Maximum daily study (hours)
         <input
@@ -73,13 +83,15 @@ export default function PreferencesPanel({
         <input
           name="session"
           type="number"
-          min="5"
+          min="15"
           max="1440"
           step="1"
           required
           defaultValue={preferences.maxSessionTimeMinutes}
+          aria-describedby="session-minimum"
         />
       </label>
+      <p id="session-minimum" className="muted small">New study blocks need at least 15 minutes. Smaller amounts of remaining work stay unscheduled without rounding up your estimate.</p>
       <label>
         Break duration (minutes)
         <input

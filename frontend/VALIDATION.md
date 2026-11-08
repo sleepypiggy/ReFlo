@@ -2,11 +2,11 @@
 
 Current integrated application checks:
 
-- Python API, availability and dashboard scheduling: **93 tests passed**.
-- Frontend calendar, task, topic, plan-accounting and backup validation: **71 tests passed**.
+- Python API, availability and dashboard scheduling: **116 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **86 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **20 passed** in Microsoft Edge against the production build.
+- `npm run test:e2e`: **24 passed** in Microsoft Edge against the production build.
 - `npm run test:live`: **7 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
@@ -115,6 +115,26 @@ coverage verifies past/started/locked reasons and automatic updates when a futur
 session starts. Unit coverage also includes finalized statuses, exact boundaries,
 and draggable manual placements. The mobile dialog was visually checked.
 
+Compact calendar layout uses actual block height to hide extra labels, truncate
+titles and retain small lock/update icons. All event content clips to its block;
+full names and time ranges remain in tooltips, accessible labels and dialogs.
+Browser coverage checks adjacent 10/15-minute commitments and study, clipping
+bounds, unchanged relative heights, week/day/month views and mobile width.
+Desktop and mobile screenshots were visually reviewed.
+
+The compact-block regression also verifies that one-hour study sessions retain
+their visible time range and title in both week and day views, with both rows
+contained inside the block. Only blocks too short for two rows hide the time.
+
+Study and fixed-event typography is checked for matching padding, title font
+size/weight/line height, time font size/line height, and time-to-title spacing,
+including a one-hour study block beside a taller fixed event.
+
+Topic rows have an explicit line height and appear only when the whole line fits.
+The regression covers a 75-minute event at the intermediate height, a taller
+event, and a shorter assignment with the complete topic retained in its tooltip.
+Update text yields to the topic row and uses its inline icon in smaller blocks.
+
 ## Goal 1 + Goal 2 branch integration (2026-11-08)
 
 Synced the conversational assignment/event draft work with `main` at `30a3511`.
@@ -144,3 +164,10 @@ production build, 21 browser regression cases, and seven live-backend cases.
 Separate teammate testing in Real backend mode confirmed clarification for
 missing study time and grade weight, preservation of the 10 PM deadline, and
 saving 30 minutes and 10% after Apply without the one-hour offset.
+
+Very short event clipping was reproduced with a one-minute event whose title
+line extended below the block. A 22px minimum display height and conservative
+whole-line cutoffs now cover 1/5/10/15/20/25/45/65/80-minute events in week and day
+views. Adjacent visually crowded event/study blocks must not cover each other.
+Only display geometry changes; actual timestamps remain unchanged. Desktop and
+mobile screenshots were visually reviewed after the fix.

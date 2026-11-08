@@ -274,7 +274,7 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   font-family: inherit;
   font-size: 12px;
 }
-[data-theme], .study-calendar {
+:root[data-theme], .study-calendar {
   --fc-classic-background: var(--canvas);
   --fc-classic-border: var(--hairline);
   --fc-classic-strong-border: var(--hairline-strong);
@@ -294,27 +294,47 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   --fc-classic-event: var(--study-bg);
   --fc-classic-event-contrast: var(--study-ink);
 }
-.study-calendar .calendar-event { border: 1px solid var(--hairline); border-left: 3px solid; border-radius: 6px; box-shadow: none; cursor: pointer; }
+.study-calendar .calendar-event { border: 1px solid var(--hairline); border-left: 3px solid; border-radius: 6px; box-shadow: none; cursor: pointer; overflow: hidden; }
+.calendar-timeGridWeek .calendar-event, .calendar-timeGridDay .calendar-event { container: study-block / size; }
 .study-calendar .fixed-event { border-left-color: var(--lecture-ink); background: var(--lecture-bg); color: var(--lecture-ink); }
 .study-calendar .study-event { border-left-color: var(--study-ink); background: var(--study-bg); color: var(--study-ink); }
 .study-calendar .completed-event { border-left-color: var(--secondary-ink); background: var(--surface-soft); color: var(--secondary-ink); }
 .study-calendar .completed-event .calendar-event-title::before { content: "✓ "; }
 .study-calendar .unfinished-event { border-left-color: var(--unfinished-ink); background: var(--unfinished-bg); color: var(--unfinished-ink); }
 .study-calendar .unfinished-event .calendar-event-title::before { content: "↻ "; }
-.calendar-event-content { padding: 4px; overflow: hidden; }
+.calendar-event-content { padding: 2px 4px; overflow: hidden; width: 100%; height: 100%; max-height: 100%; min-width: 0; }
+.calendar-update-icon { display: none; }
 .session-lock-icon { display: inline-block; vertical-align: -1px; margin-right: 3px; }
 .move-reason-text { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .session-move-reason { display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: var(--surface-soft); border: 1px solid var(--hairline); border-radius: 10px; }
 .session-move-reason > svg { flex-shrink: 0; margin-top: 3px; }
 .session-move-reason p { margin: 0; }
-.calendar-event-title { font-size: 13px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
-.calendar-event-time { font-size: 12px; line-height: 1.3; margin-bottom: 4px; white-space: nowrap; }
+.calendar-event-title { font-size: 13px; font-weight: 600; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-event-time { font-size: 12px; line-height: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calendar-event-topic, .calendar-change-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@container study-block (max-height: 66px) {
+  .calendar-change-label { display: none; }
+  .calendar-update-icon { display: inline-block; vertical-align: -1px; margin-right: 3px; }
+}
+@container study-block (max-height: 52px) {
+  .calendar-event-topic { display: none; }
+}
+@container study-block (max-height: 36px) {
+  .calendar-event-time { display: none; }
+}
+@container study-block (max-height: 20px) {
+  .calendar-event-content { padding: 0 2px; }
+  .calendar-event-title { font-size: 11px; line-height: 14px; }
+  .session-lock-icon, .calendar-update-icon { width: 11px; height: 11px; }
+}
 .study-calendar .calendar-time-label { font-size: 12px; color: var(--secondary-ink); }
 .study-calendar .calendar-day-label { font-size: 13px; font-weight: 500; color: var(--ink); padding: 17px 0; }
 .study-calendar .calendar-day-today { background: var(--amber-bg); color: var(--amber-ink); border-radius: 6px; }
 .calendar-dayGridMonth .calendar-event-content { display: flex; align-items: baseline; gap: 4px; min-width: 0; padding: 2px 4px; }
 .calendar-dayGridMonth .calendar-event-time { flex-shrink: 0; margin-bottom: 0; }
-.calendar-dayGridMonth .calendar-event-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-dayGridMonth .calendar-event-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.calendar-dayGridMonth .calendar-event-topic, .calendar-dayGridMonth .calendar-change-label { display: none; }
+.calendar-dayGridMonth .calendar-update-icon { display: inline-block; vertical-align: -1px; margin-right: 3px; }
 @media (min-width: 1800px) { .main-content { padding: 33px 50px; } }
 @media (max-width: 1200px) {
   .app-shell { grid-template-columns: 220px minmax(0, 1fr); }
@@ -401,13 +421,18 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
 .form-stack .custom-color-control { font-size: 13px; margin: 13px 0; }
 .custom-color-inputs { display: flex; align-items: center; gap: 13px; }
 .form-stack input[type="color"] { width: 56px; height: 44px; padding: 4px; border-radius: 8px; cursor: pointer; flex-shrink: 0; }
-.calendar-event-topic { font-size: 11px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-event-topic { font-size: 11px; line-height: 14px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.calendar-change-label { line-height: 12px; margin-top: 2px; }
 .calendar-dayGridMonth .calendar-event-topic { display: none; }
-.assistant-panel { border: 1px solid var(--hairline); border-radius: 13px; padding: 20px; margin-bottom: 20px; background: var(--surface-soft); }
+.assistant-panel { min-width: 0; font-size: 16px; line-height: 1.55; overflow-wrap: anywhere; border: 1px solid var(--hairline); border-radius: 13px; padding: 20px; margin-bottom: 20px; background: var(--surface-soft); }
 .assistant-panel h2, .assistant-panel h3, .assistant-panel h4, .assistant-panel p { margin: 0; }
-.assistant-panel textarea { width: 100%; min-width: 0; resize: vertical; border: 1px solid var(--hairline-strong); border-radius: 8px; padding: 10px; background: var(--surface-raised); color: var(--ink); }
+.assistant-panel h2 { font-size: 22px; }
+.assistant-panel textarea { width: 100%; min-width: 0; font-size: 17px; line-height: 1.55; overflow-wrap: anywhere; resize: vertical; border: 1px solid var(--hairline-strong); border-radius: 8px; padding: 10px; background: var(--surface-raised); color: var(--ink); }
 .assistant-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.assistant-panel .assistant-actions .button { min-width: 0; max-width: 100%; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
 .assistant-preview { border-top: 1px solid var(--hairline); padding-top: 16px; overflow-wrap: anywhere; }
+.assistant-panel .chat-draft, .assistant-panel .assistant-preview, .assistant-panel .chat-draft .small, .assistant-panel .assistant-preview .small { font-size: 16px; line-height: 1.55; }
+.assistant-panel .chat-draft p, .assistant-panel .assistant-preview p, .assistant-panel .assistant-preview li, .assistant-panel .assistant-preview h3, .assistant-panel .assistant-preview h4 { font-size: 16px; line-height: 1.55; }
 .assistant-sessions { max-height: 280px; overflow-y: auto; margin: 0; padding-left: 20px; }
 .assistant-sessions li { margin-bottom: 10px; }
 .assistant-sessions span { display: block; color: var(--secondary-ink); }
@@ -452,14 +477,14 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
 
 /* Conversational assistant: one transcript and an unsaved, structured draft. */
 .assistant-transcript { display: flex; flex-direction: column; align-items: flex-start; gap: 13px; max-height: 340px; overflow-y: auto; padding: 4px; }
-.chat-message { max-width: 90%; padding: 13px 17px; border-radius: 13px; background: var(--surface-raised); color: var(--ink); overflow-wrap: anywhere; }
+.chat-message { min-width: 0; max-width: 90%; font-size: 17px; line-height: 1.55; padding: 13px 17px; border-radius: 13px; background: var(--surface-raised); color: var(--ink); overflow-wrap: anywhere; }
 .chat-message.chat-user { align-self: flex-end; background: var(--lecture-bg); color: var(--lecture-ink); }
-.chat-speaker { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-.chat-message p { white-space: pre-wrap; }
+.chat-speaker { display: block; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.assistant-panel .chat-message p { font-size: 17px; line-height: 1.55; white-space: pre-wrap; }
 .chat-draft { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 13px; padding: 17px; }
 .chat-draft h3 { font-size: 16px; font-weight: 600; margin-bottom: 13px; }
 .chat-draft dl { display: grid; gap: 8px; margin: 0 0 13px; }
 .chat-draft dl > div { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr); gap: 13px; }
-.chat-draft dt { color: var(--secondary-ink); font-size: 13px; }
+.chat-draft dt { color: var(--secondary-ink); font-size: 16px; }
 .chat-draft dd { margin: 0; overflow-wrap: anywhere; }
-@media (max-width: 520px) { .chat-message { max-width: 100%; } .chat-draft dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+@media (max-width: 520px) { .chat-message { max-width: 100%; } .chat-draft dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; } .assistant-panel .assistant-actions .button { flex: 1 1 140px; } }

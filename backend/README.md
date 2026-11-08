@@ -122,6 +122,12 @@ From the repository root in PowerShell:
 .\backend\.venv\Scripts\python.exe demo_week.py
 ```
 
+Scheduler generated checks, the independent exhaustive reference, reproduction
+commands and measured heuristic gaps are described in
+[scheduler verification](../docs/SCHEDULER_VERIFICATION.md). Run
+`python -m unittest -v test_scheduler_generated test_scheduler_reference` for the
+focused suite, or `python -m unittest discover -v` for all Python tests.
+
 ## Optional Gemini assistant
 
 The teammate's `POST /assistant/parse` endpoint is registered on the same FastAPI

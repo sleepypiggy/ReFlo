@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Task, type StudyBlock } from "./datatypes";
-import { initialWorkspace, exportBackup, importBackup } from "./lib/storage";
+import { initialWorkspace, exportBackup, importBackup, loadWorkspace } from "./lib/storage";
 import { hasStudyConflict, releaseConflictingPlacements, upcomingMinutes, planChangeDetails, planChanges } from "./lib/plan";
 
 const now = new Date("2026-11-10T10:00:00Z");
@@ -92,6 +92,67 @@ describe("plan accounting", () => {
 });
 
 describe("backup validation", () => {
+  it("upgrades early wake-up preferences without dropping data or invalidating the next reload", (context) => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+    context.after(() => {
+      if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
+      else Reflect.deleteProperty(globalThis, "localStorage");
+    });
+    for (const bedtime of ["23:00", "06:00"]) {
+      const workspace = initialWorkspace();
+      workspace.backend = schedule();
+      workspace.backend.preferences.sleepHours = { wakeUpTime: "05:59", bedtime };
+      let raw = JSON.stringify(workspace);
+      Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => raw } });
+      const restored = loadWorkspace();
+      assert.equal(restored.error, undefined);
+      assert.equal(restored.workspace.backend.preferences.sleepHours.wakeUpTime, "06:00");
+      assert.equal(restored.workspace.backend.needsReplan, true);
+      assert.deepEqual(restored.workspace.backend.tasks, workspace.backend.tasks);
+      raw = JSON.stringify(restored.workspace);
+      assert.equal(loadWorkspace().error, undefined);
+      assert.equal(importBackup(exportBackup(workspace)).backend.preferences.sleepHours.wakeUpTime, "06:00");
+    }
+  });
+  it("normalizes old backup session limits without losing assignments or history", () => {
+    for (const mode of ["backend", "demo"] as const) {
+      for (const maximum of [1, 5, 14, 15]) {
+        const workspace = initialWorkspace();
+        workspace[mode] = schedule();
+        workspace[mode].preferences.maxSessionTimeMinutes = maximum;
+        workspace[mode].tasks[0].remainingTimeMinutes = 8;
+        workspace[mode].studyBlocks = [block("history", "2026-11-10T08:00:00Z", "2026-11-10T08:05:00Z", "completed")];
+        const restored = importBackup(exportBackup(workspace));
+        assert.equal(restored[mode].preferences.maxSessionTimeMinutes, 15);
+        assert.equal(restored[mode].needsReplan, true);
+        assert.deepEqual(restored[mode].tasks, workspace[mode].tasks);
+        assert.deepEqual(restored[mode].studyBlocks, workspace[mode].studyBlocks);
+      }
+    }
+  });
+  it("normalizes saved session limits and marks only affected plans stale", (context) => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+    context.after(() => {
+      if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
+      else Reflect.deleteProperty(globalThis, "localStorage");
+    });
+    for (const mode of ["backend", "demo"] as const) {
+      for (const maximum of [1, 5, 14, 15]) {
+        const workspace = initialWorkspace();
+        workspace[mode] = schedule();
+        workspace.demo.needsReplan = workspace.backend.needsReplan = false;
+        workspace[mode].preferences.maxSessionTimeMinutes = maximum;
+        const raw = JSON.stringify(workspace);
+        Object.defineProperty(globalThis, "localStorage", { configurable: true, value: { getItem: () => raw } });
+        const restored = loadWorkspace();
+        assert.equal(restored.error, undefined);
+        assert.equal(restored.workspace[mode].preferences.maxSessionTimeMinutes, 15);
+        assert.equal(restored.workspace[mode].needsReplan, maximum < 15);
+        assert.equal(restored.workspace[mode === "demo" ? "backend" : "demo"].needsReplan, false);
+        assert.deepEqual(restored.workspace[mode].tasks, workspace[mode].tasks);
+      }
+    }
+  });
   it("round trips tasks, dates, skipped history and both workspaces", () => {
     const workspace = initialWorkspace();
     workspace.backend = schedule();

@@ -45,12 +45,26 @@ The dashboard separates remaining, upcoming and unscheduled time. JSON backup an
 restore work for both demo and real workspaces, with validation and confirmation.
 See [the frontend guide](frontend/README.md#planning-controls-and-backups) for details.
 Automated project checks are defined in `.github/workflows/checks.yml`.
+Seeded scheduler invariants and a bounded independent exhaustive solver measure
+constraint correctness and heuristic gaps; see
+[scheduler verification](docs/SCHEDULER_VERIFICATION.md) for commands and results.
 
 Study sessions that cannot be dragged show a lock icon. Hover over the block or
 open it (click, Enter or Space) to see the specific reason: past time, already
 started, locked, completed, unfinished or skipped history. Move failures explain
 deadline, sleep, fixed-event, break and daily-limit conflicts without changing
 the saved plan. Indicators refresh as sessions reach their start time.
+
+Short calendar blocks use compact, truncated titles and small status icons so
+text stays within its block. Time ranges remain visible whenever a time row and
+title row fit; only the smallest blocks hide the time row. Taller blocks also
+retain topic labels. Hover
+for full details or open a block to view its complete title and times. This
+changes the display only; event and study durations are preserved.
+
+Very short entries have a small minimum display height so a complete title line
+can fit. Their actual start/end times stay unchanged, and visually crowded blocks
+are arranged side by side rather than covering each other.
 
 ## Study Spacing
 
@@ -63,6 +77,15 @@ See [the spacing contract](frontend/API_CONTRACT.md#study-spacing) for details.
 New study sessions have a 15-minute minimum. Session lengths can vary (for
 example, 60 + 45 minutes); small gaps are skipped rather than turned into tiny
 sessions. Any work that cannot fit under these limits is shown as unscheduled.
+The scheduler prefers durations in five-minute increments by redistributing a
+few minutes between new sessions of the same assignment (for example, 36 + 54
+becomes 35 + 55). Exact work totals are preserved. Odd durations remain when
+required by the estimate or scheduling constraints; locked history is unchanged.
+Preferences and `/schedule` require a session maximum of at least 15 minutes.
+Older saved preferences and backups with smaller positive limits are upgraded to
+15 and flagged for plan regeneration without losing workspace data. Assignments
+with less than 15 minutes remaining stay valid, with their exact minutes shown
+as unscheduled and a specific explanation. `/api/plan` keeps its legacy behavior.
 
 In Real backend mode, adding, editing or importing a fixed event that overlaps
 future study automatically regenerates the plan. Event times stay fixed; study

@@ -1,5 +1,6 @@
 import type { Schedule } from "@/datatypes";
 import { AlertTriangle, ChevronDown } from "lucide-react";
+import ShortageSuggestions from "./ShortageSuggestions";
 
 const time = (minutes: number) => {
   const wholeHours = Math.floor(minutes / 60);
@@ -12,6 +13,11 @@ export default function TimeShortagePanel({ schedule, demo }: {
   schedule: Schedule;
   demo: boolean;
 }) {
+  if (!demo) return <ShortageSuggestions schedule={schedule} />;
+  return <DemoShortages schedule={schedule} demo={demo} />;
+}
+
+function DemoShortages({ schedule, demo }: { schedule: Schedule; demo: boolean }) {
   const tasks = schedule.tasks.filter((task) => task.remainingTimeMinutes > 0);
   const required = tasks.reduce((sum, task) => sum + task.remainingTimeMinutes, 0);
   const missing = schedule.warnings.reduce((sum, warning) => sum + warning.unscheduledMinutes, 0);
@@ -43,7 +49,7 @@ export default function TimeShortagePanel({ schedule, demo }: {
         {schedule.warnings.map((warning, index) => (
           <li key={`${warning.taskId}-${index}`}>
             <strong>{schedule.tasks.find((task) => task.id === warning.taskId)?.name}</strong>
-            : {time(warning.unscheduledMinutes)} unscheduled — {demo ? warning.reason : "Work could not be placed before the deadline under your current preferences."}
+            : {time(warning.unscheduledMinutes)} unscheduled — {warning.reason}
           </li>
         ))}
       </ul>

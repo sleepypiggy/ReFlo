@@ -3,6 +3,9 @@
 import unittest
 from datetime import timedelta
 
+from fastapi.testclient import TestClient
+
+from backend.app.main import app
 from backend.app.schedule_api import ScheduleRequest, generate_schedule
 from test_schedule import request_payload
 
@@ -45,15 +48,35 @@ class MinimumSessionTests(unittest.TestCase):
             self.assertFalse(result.unscheduled)
 
     def test_less_than_minimum_is_unscheduled_without_overbooking(self):
-        for minutes in (8, 14):
-            lengths, result = self.plan(minutes)
-            self.assertEqual(lengths, [])
-            self.assertEqual(result.unscheduled[0].minutes, minutes)
+        with TestClient(app) as client:
+            for minutes in (1, 8, 14):
+                for spread in (False, True):
+                    data = request_payload()
+                    data["tasks"][0].update(estimated_minutes=minutes, remaining_minutes=minutes)
+                    data["preferences"]["spread_assignments"] = spread
+                    response = client.post("/schedule", json=data)
+                    self.assertEqual(response.status_code, 200)
+                    result = response.json()
+                    self.assertEqual(result["study_blocks"], [])
+                    self.assertEqual(result["unscheduled"][0]["minutes"], minutes)
+                    self.assertIn("below the 15-minute minimum", result["unscheduled"][0]["reason"])
+                    self.assertIn("not been rounded up", result["unscheduled"][0]["reason"])
 
-    def test_small_preferred_maximum_does_not_create_tiny_blocks(self):
-        lengths, result = self.plan(60, maximum=10)
-        self.assertEqual(lengths, [])
-        self.assertEqual(result.unscheduled[0].minutes, 60)
+    def test_session_maximum_below_15_is_a_field_error(self):
+        with TestClient(app) as client:
+            for maximum in (1, 5, 10, 14):
+                data = request_payload()
+                data["preferences"]["max_session_minutes"] = maximum
+                response = client.post("/schedule", json=data)
+                self.assertEqual(response.status_code, 400)
+                detail = response.json()["details"][0]
+                self.assertEqual(detail["loc"], ["body", "preferences", "max_session_minutes"])
+                self.assertIn("greater than or equal to 15", detail["msg"])
+
+    def test_15_minute_maximum_is_accepted(self):
+        lengths, result = self.plan(30, maximum=15)
+        self.assertEqual(lengths, [15, 15])
+        self.assertFalse(result.unscheduled)
 
     def test_shortage_can_admit_a_valid_partial_session(self):
         lengths, result = self.plan(60, deadline="2026-11-10T09:20:00Z")

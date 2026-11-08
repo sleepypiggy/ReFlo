@@ -31,6 +31,17 @@ def initial_request():
 
 
 class APITests(unittest.TestCase):
+    def test_legacy_plan_allows_sessions_below_15_minutes(self):
+        payload = initial_request()
+        payload.update(max_session_minutes=5, remaining_minutes=8)
+        status, _, result = self.request(payload)
+        self.assertEqual(status, 200)
+        self.assertEqual(result["future_scheduled_minutes"], 8)
+        self.assertEqual(result["unscheduled_minutes"], 0)
+        lengths = [(datetime.fromisoformat(block["end"]) - datetime.fromisoformat(block["start"])).total_seconds() / 60
+                   for block in result["future_blocks"]]
+        self.assertEqual(lengths, [5, 3])
+
     @classmethod
     def setUpClass(cls):
         cls.client = TestClient(app)

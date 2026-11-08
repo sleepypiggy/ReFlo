@@ -81,11 +81,11 @@ describe("calendar study moves", () => {
     assert.ok(move(plan(), at(11, 7)).schedule);
     const night = plan(); night.preferences.sleepHours = { bedtime: "07:00", wakeUpTime: "20:00" };
     rejected(night, at(11, 12), /sleep/);
-    assert.ok(move(night, at(11, 23, 30)).schedule);
+    rejected(night, at(11, 23, 30), /6:00 a.m./);
     rejected(night, at(11, 6, 30), /sleep/);
     night.preferences.maxStudyTimeMinutes = 60;
     night.studyBlocks.push(session("other", 12, 1));
-    rejected(night, at(11, 23, 30), /daily study limit/);
+    rejected(night, at(11, 23, 30), /6:00 a.m./);
   });
   it("rejects commitments, overlaps and insufficient breaks, accepting exact boundaries", () => {
     const value = plan();

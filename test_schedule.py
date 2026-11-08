@@ -208,7 +208,22 @@ class DashboardApiTests(unittest.TestCase):
     def test_overnight_waking_hours(self):
         self.payload["preferences"].update(wake_up_time="20:00", bedtime="03:00")
         data = self.plan()
-        self.assertTrue(all(dt(block["start"]).hour >= 20 or dt(block["start"]).hour < 3 for block in data["study_blocks"]))
+        self.assertTrue(data["study_blocks"])
+        self.assertTrue(all(dt(block["start"]).hour >= 20 for block in data["study_blocks"]))
+
+    def test_wake_up_minimum_and_local_six_am_boundary(self):
+        self.payload["preferences"]["wake_up_time"] = "05:59"
+        response = self.client.post("/schedule", json=self.payload)
+        self.assertEqual(response.status_code, 400, response.text)
+        self.assertIn("06:00", response.text)
+        self.payload.update(timezone="America/Vancouver", current_time="2026-11-10T13:00:00Z")
+        self.payload["tasks"][0].update(deadline="2026-11-10T16:00:00Z", remaining_minutes=60)
+        self.payload["preferences"].update(wake_up_time="06:00", bedtime="23:00")
+        for spread in (False, True):
+            self.payload["preferences"]["spread_assignments"] = spread
+            blocks = self.plan()["study_blocks"]
+            self.assertTrue(blocks)
+            self.assertGreaterEqual(dt(blocks[0]["start"]).astimezone(ZoneInfo("America/Vancouver")).hour, 6)
 
     def test_real_browser_seconds_round_forward(self):
         self.payload["current_time"] = "2026-11-10T09:00:30.123Z"
