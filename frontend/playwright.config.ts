@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
+  testIgnore: "live-backend.spec.ts",
   outputDir: "./test-results/browser",
   fullyParallel: false,
   workers: 1,

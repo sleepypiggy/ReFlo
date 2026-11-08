@@ -1,0 +1,24 @@
+{
+  "contract_version": 1,
+  "current_time": "2026-11-10T08:00:00.123Z",
+  "timezone": "UTC",
+  "tasks": [
+    {
+      "id": "statistics",
+      "title": "Statistics",
+      "deadline": "2026-11-12T12:00:00.000Z",
+      "estimated_minutes": 240,
+      "remaining_minutes": 240,
+      "grade_weight": 20
+    }
+  ],
+  "events": [],
+  "preferences": {
+    "wake_up_time": "09:00",
+    "bedtime": "12:00",
+    "max_daily_study_minutes": 120,
+    "max_session_minutes": 60,
+    "break_minutes": 15
+  },
+  "locked_blocks": []
+}
