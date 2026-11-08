@@ -4,7 +4,7 @@ async function start(page: Page) {
   await page.clock.setFixedTime(new Date("2026-11-04T08:00:00Z"));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Your week, with a plan." }),
+    page.getByRole("heading", { name: "My Schedule" }),
   ).toBeVisible();
   await expect(page.locator(".calendar-event").first()).toBeVisible();
 }
@@ -28,6 +28,7 @@ test("assignment, event and preferences forms persist across refresh", async ({
 }) => {
   await start(page);
   await addTask(page);
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
   const task = page.locator(".assignment").filter({
     has: page.getByRole("heading", { name: "Test assignment", exact: true }),
   });
@@ -48,6 +49,7 @@ test("assignment, event and preferences forms persist across refresh", async ({
   await page.getByLabel("End datetime").fill("2026-11-04T16:00");
   await page.getByLabel("Wed", { exact: true }).check();
   await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await page.getByRole("button", { name: "Calendar", exact: true }).click();
   await expect(
     page.locator(".calendar-event").filter({ hasText: "Campus shift" }),
   ).toHaveCount(1);
@@ -59,18 +61,19 @@ test("assignment, event and preferences forms persist across refresh", async ({
   await page.getByLabel("Break duration (minutes)").fill("20");
   await page.getByRole("button", { name: "Save preferences" }).click();
   await page.reload();
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
   await expect(
     page.getByRole("heading", { name: "Edited assignment" }),
   ).toBeVisible();
-  await expect(page.locator(".dashboard-footer")).toContainText(
-    "06:30 wake-up",
-  );
+  await page.getByRole("button", { name: "Calendar", exact: true }).click();
   await expect(
     page.locator(".calendar-event").filter({ hasText: "Campus shift" }),
   ).toHaveCount(1);
   await page.getByRole("button", { name: "Preferences", exact: true }).click();
   await expect(page.getByLabel("Maximum session (minutes)")).toHaveValue("75");
+  await expect(page.getByLabel("Wake-up time")).toHaveValue("06:30");
   await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /Assignments/ }).click();
   await page
     .getByRole("button", { name: "Delete Edited assignment", exact: true })
     .click();
@@ -80,6 +83,7 @@ test("assignment, event and preferences forms persist across refresh", async ({
   await expect(
     page.getByRole("heading", { name: "Edited assignment" }),
   ).toHaveCount(0);
+  await page.getByRole("button", { name: "Calendar", exact: true }).click();
   await page.getByRole("button", { name: "Next period" }).click();
   await page
     .locator(".fixed-event")

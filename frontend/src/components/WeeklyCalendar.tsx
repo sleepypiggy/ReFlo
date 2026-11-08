@@ -40,8 +40,8 @@ export default function WeeklyCalendar({
         start: event.startTime,
         end: event.endTime,
         className: "calendar-event fixed-event",
-        color: "#eaf1fc",
-        contrastColor: "#4a6b9f",
+        color: "var(--lecture-bg)",
+        contrastColor: "var(--lecture-ink)",
         extendedProps: { type: "fixed", eventId: event.id },
       })),
       ...studyBlocks.map((block) => ({
@@ -53,16 +53,16 @@ export default function WeeklyCalendar({
         end: block.endTime,
         color:
           block.status === "completed"
-            ? "#eef0f3"
+            ? "var(--surface-soft)"
             : block.status === "unfinished"
-              ? "#fff1e2"
-              : "#e9f4ed",
+              ? "var(--unfinished-bg)"
+              : "var(--study-bg)",
         contrastColor:
           block.status === "completed"
-            ? "#5c6879"
+            ? "var(--secondary-ink)"
             : block.status === "unfinished"
-              ? "#94642b"
-              : "#386d52",
+              ? "var(--unfinished-ink)"
+              : "var(--study-ink)",
         className:
           block.status === "completed"
             ? "calendar-event completed-event"
@@ -82,8 +82,12 @@ export default function WeeklyCalendar({
     <section className="calendar-card" aria-label="Study calendar">
       <div className="calendar-toolbar">
         <div className="calendar-date">
-          <h2>{title || "Your week"}</h2>
-          <div className="calendar-arrows">
+          <h2>{view === "timeGridWeek"
+            ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" })
+              .formatRange(range.start, new Date(+range.end - 1))
+            : title || "Your schedule"}</h2>
+        </div>
+        <div className="calendar-navigation">
             <button
               className="icon-button"
               aria-label="Previous period"
@@ -91,6 +95,12 @@ export default function WeeklyCalendar({
             >
               <ChevronLeft size={18} />
             </button>
+          <button
+            className="button compact"
+            onClick={() => ref.current?.getApi().today()}
+          >
+            Today
+          </button>
             <button
               className="icon-button"
               aria-label="Next period"
@@ -98,13 +108,6 @@ export default function WeeklyCalendar({
             >
               <ChevronRight size={18} />
             </button>
-          </div>
-          <button
-            className="button compact"
-            onClick={() => ref.current?.getApi().today()}
-          >
-            Today
-          </button>
         </div>
         <div className="segmented">
           {[
@@ -141,7 +144,7 @@ export default function WeeklyCalendar({
           slotDuration="00:30:00"
           slotHeaderInterval="01:00:00"
           slotHeaderClass="calendar-time-label"
-          dayHeaderClass="calendar-day-label"
+          dayHeaderClass={(info) => `calendar-day-label${info.isToday ? " calendar-day-today" : ""}`}
           height={690}
           nowIndicator
           editable={false}
@@ -182,6 +185,7 @@ export default function WeeklyCalendar({
           )}
           eventDidMount={(info) => {
             info.el.setAttribute("tabindex", "0");
+            info.el.setAttribute("title", info.event.title);
             info.el.setAttribute("role", "button");
             info.el.setAttribute(
               "aria-label",
