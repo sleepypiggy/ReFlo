@@ -2,14 +2,24 @@
 
 Current integrated application checks:
 
-- Python API, availability and dashboard scheduling: **63 tests passed**.
-- Frontend task, plan-accounting and backup validation: **28 tests passed**.
+- Python API, availability and dashboard scheduling: **65 tests passed**.
+- Frontend calendar, task, plan-accounting and backup validation: **41 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **9 passed** in Microsoft Edge against the production build.
-- `npm run test:live`: **3 passed** using separate browser and real FastAPI servers.
+- `npm run test:e2e`: **14 passed** in Microsoft Edge against the production build.
+- `npm run test:live`: **4 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
+
+Calendar coverage includes single/weekly imports, COUNT/UNTIL, EXDATE, cancelled
+and moved occurrences, both DST transitions, embedded timezone consistency,
+unknown/ambiguous/nonexistent timezone errors, malformed/unsupported features,
+size/expansion limits, repeated-import identities, backup revival, API UTC
+serialization and overlap rejection, valid UTC exports, and exact time round trips.
+The browser verifies preview, selection, confirmation, repeated imports, refresh,
+mobile preview width, downloads and export re-import. The live calendar test
+checks that actual Python scheduling reserves imported lecture times before export.
+The focused two-test calendar browser suite also passes after the final build.
 
 Assistant endpoint tests use mocked Gemini responses; no live model calls were
 made. Light/dark theme switching, persistence, storage failure handling and

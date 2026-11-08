@@ -368,6 +368,10 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   align-items: center;
 }
 .dashboard-footer { flex-wrap: wrap; gap: 12px; }
+.calendar-files { margin-block: 16px; }
+.calendar-preview { max-height: 320px; overflow-y: auto; overflow-wrap: anywhere; }
+.calendar-choice { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; }
+.calendar-choice input { width: auto; flex-shrink: 0; margin-top: 4px; }
 .backup-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .backup-actions label:focus-within { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .plan-dirty {

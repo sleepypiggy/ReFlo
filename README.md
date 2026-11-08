@@ -295,3 +295,9 @@ The original demo and availability tests are retained. Root `scheduler.py` and
 The browser dashboard uses the multi-assignment `/schedule` contract documented
 above; `/api/plan` retains the original single-assignment demo semantics.
 
+Calendar files are supported in the dashboard: preview/select `.ics` commitments,
+then regenerate the plan; export upcoming planned study sessions as a UTC `.ics`
+snapshot. Weekly classes support bounded recurrence and cancelled/moved
+occurrences. Existing data and manual event entry are preserved. See
+[calendar instructions, supported formats and limits](frontend/README.md#calendar-files).
+

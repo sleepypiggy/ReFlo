@@ -32,6 +32,7 @@ import WeeklyCalendar from "./WeeklyCalendar";
 import TimeShortagePanel from "./TimeShortagePanel";
 import ThemeToggle from "./ThemeToggle";
 import AssistantPanel from "./AssistantPanel";
+import CalendarFiles from "./CalendarFiles";
 
 type Dialog =
   | { type: "assignment"; task?: Task }
@@ -425,6 +426,7 @@ export default function Dashboard() {
                   </aside>
                 )}
               </div>
+              <CalendarFiles key={`calendar-files-${mode}`} schedule={schedule} onImport={changed} />
               {section === "assignments" && (
               <div className="stats-grid">
                 <div className="stat">
