@@ -117,7 +117,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .nav-item:hover { background: var(--surface-raised); color: var(--ink); }
 .nav-item.active { color: var(--selection-ink); background: var(--selection-bg); border-color: var(--selection-bg); }
 .nav-count, .count { margin-left: auto; border-radius: 6px; padding: 1px 7px; font-size: 12px; background: var(--surface-raised); color: var(--secondary-ink); }
-.sidebar-actions { display: grid; gap: 13px; padding-top: 25px; margin-top: 33px; border-top: 1px solid var(--hairline); }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 17px; border: 1px solid var(--hairline-strong); border-radius: 9999px; background: var(--surface-raised); color: var(--ink); font-size: 14px; font-weight: 500; line-height: 1.25; }
 .button:hover { background: var(--surface-soft); border-color: var(--secondary-ink); }
 .button.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
@@ -350,12 +349,11 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
 @media (max-width: 1023px) {
   .app-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; }
   .topbar { padding: 13px 25px; min-height: 72px; }
-  .sidebar { position: static; height: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 13px; padding: 13px 25px; border-right: 0; border-bottom: 1px solid var(--hairline); }
+  .sidebar { position: static; height: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 13px 25px; border-right: 0; border-bottom: 1px solid var(--hairline); }
   .sidebar nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nav-item { justify-content: center; }
   .workspace-label, .sidebar-bottom .student { display: none; }
   .sidebar-bottom { display: block; padding: 0; margin: 0; }
-  .sidebar-actions { margin: 0; padding: 0; border: 0; }
   .calendar-scroll { overflow-x: auto; }
   .calendar-scroll .calendar-timeGridWeek { min-width: 770px; }
   .assignment-panel .assignments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -378,10 +376,8 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   .sidebar { grid-template-columns: minmax(0, 1fr) auto; padding: 13px; gap: 8px; }
   .sidebar nav { grid-column: 1; grid-row: 1; }
   .sidebar-bottom { grid-column: 2; grid-row: 1; }
-  .sidebar-actions { grid-column: 1 / -1; grid-row: 2; }
   .nav-item { padding: 8px 4px; font-size: 12px; gap: 6px; }
   .nav-count { display: none; }
-  .sidebar-actions .button { font-size: 12px; min-height: 44px; }
   .main-content { padding: 25px 13px; }
   .page-heading { align-items: flex-start; flex-direction: column; gap: 17px; }
   .page-actions { gap: 8px; width: 100%; }
@@ -495,3 +491,17 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
 .chat-draft dt { color: var(--secondary-ink); font-size: 16px; }
 .chat-draft dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 520px) { .chat-message { max-width: 100%; } .chat-draft dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; } .assistant-panel .assistant-actions .button { flex: 1 1 140px; } }
+
+.schedule-workspace.with-assistant { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, 360px); align-items: start; gap: 20px; }
+.schedule-workspace > * { min-width: 0; }
+.assistant-column { position: sticky; top: 96px; max-height: calc(100dvh - 112px); overflow-y: auto; }
+.assistant-column .assistant-panel { margin-bottom: 0; }
+.assistant-toggle { display: none; }
+.assistant-panel [aria-label="Study advice"] summary { cursor: pointer; color: var(--secondary-ink); }
+.assistant-panel [aria-label="Study advice"] ul { margin: 4px 0 0; padding-left: 18px; }
+@media (max-width: 1199px) {
+  .schedule-workspace.with-assistant { grid-template-columns: minmax(0, 1fr); }
+  .assistant-toggle { display: inline-flex; margin-bottom: 12px; }
+  .assistant-column { position: static; max-height: none; grid-row: 1; }
+  .assistant-column[data-open="false"] { display: none; }
+}

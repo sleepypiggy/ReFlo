@@ -73,6 +73,7 @@ test("asks for weight, restores its pending draft, previews shortages and applie
   expect(await saved(page)).toEqual(before);
   await page.setViewportSize({ width: 320, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Show assistant", exact: true }).click();
   await page.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(preview).toHaveCount(0);
   await expect(page.locator(".study-event")).toHaveCount(1);
@@ -82,6 +83,7 @@ test("asks for weight, restores its pending draft, previews shortages and applie
   expect((await saved(page)).tasks[0].name).toBe("Math worksheet");
   await expect(page.locator(".study-event")).toHaveCount(0);
   await page.reload();
+  await page.getByRole("button", { name: "Show assistant", exact: true }).click();
   await expect(page.getByRole("log")).toContainText("Assignment added");
   await expect(pending).toHaveCount(0);
   expect((await saved(page)).tasks).toHaveLength(1);

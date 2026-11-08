@@ -129,29 +129,30 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
   return (
     <section className="assistant-panel form-stack" aria-label="Flo">
       <h2>Flo</h2>
-      <p className="muted">Add an assignment or event through chat. I’ll ask for missing details, then show a plan for you to review.</p>
+      <p className="muted">Add an assignment or event, then review the changes.</p>
       <div className="assistant-actions">
         <button className="button" type="button" onClick={() => setAdviceRequests(count => count + 1)}>
           What should I study next?
         </button>
       </div>
       {advice && <section className="chat-draft" aria-label="Study advice" aria-live="polite">
-        <h3>What to study next</h3>
+        <h3>Next up</h3>
         {advice.type === "stale" ? <p>Your plan is stale. Generate a fresh schedule before choosing your next session.</p>
           : advice.type === "none" ? <p>There is no upcoming planned study session for an active assignment. Generate a schedule to plan remaining work.</p>
           : <>
             <p><strong>{advice.taskName}</strong></p>
-            <p>{when(advice.block.startTime)} – {when(advice.block.endTime)} ({advice.durationMinutes} minutes)</p>
-            <p>Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}.</p>
-            <p>{advice.reason}</p>
+            <p>{when(advice.block.startTime)} – {advice.block.endTime.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} · {advice.durationMinutes} minutes</p>
+            <details>
+              <summary>Why this session?</summary>
+              <p>{advice.reason}</p>
+            </details>
           </>}
         {advice.shortages.length > 0 && <section aria-label="Advice unscheduled work">
-          <h4>{advice.type === "stale" ? "Previously reported unscheduled work" : "Known unscheduled work"}</h4>
+          <h4>{advice.type === "stale" ? "Previously reported unscheduled work" : "Still unscheduled"}</h4>
           <ul>{advice.shortages.map(item => <li key={item.taskId}>
             {item.name}: {item.minutes} minutes unscheduled.
           </li>)}</ul>
         </section>}
-        <p className="muted small">Advice only. Your calendar and preferences have not changed.</p>
       </section>}
       {storageNotice && <p className="muted small" role="status">{storageNotice}</p>}
       <div className="assistant-transcript" role="log" aria-label="Conversation with Flo" aria-live="polite" ref={transcript}>
