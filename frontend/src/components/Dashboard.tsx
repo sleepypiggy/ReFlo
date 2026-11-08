@@ -22,6 +22,7 @@ import { duration, hours } from "@/lib/calendar";
 import { demoResult } from "@/lib/mockData";
 import { loadWorkspace, saveWorkspace, exportBackup, importBackup, type Workspace } from "@/lib/storage";
 import { planChanges, upcomingMinutes } from "@/lib/plan";
+import { moveCalendarItem, type CalendarMove } from "@/lib/calendarMoves";
 import AssignmentForm from "./AssignmentForm";
 import AssignmentList from "./AssignmentList";
 import EventForm from "./EventForm";
@@ -106,6 +107,22 @@ export default function Dashboard() {
     setNotice("Saved. Generate a schedule to account for these changes.");
     setError("");
   };
+  function move(move: CalendarMove) {
+    if (busy) { setError("Wait for schedule generation to finish before moving an event."); return false; }
+    const result = moveCalendarItem(schedule, move);
+    if (!result.schedule) {
+      setError(`Move reverted. ${result.error}`);
+      setNotice("");
+      return false;
+    }
+    apply(result.schedule);
+    setUndo(null);
+    setError("");
+    setNotice(move.type === "fixed"
+      ? "Commitment moved. Generate a schedule to account for this change. Only this occurrence was moved."
+      : "Session moved and saved. This placement will be preserved when you regenerate.");
+    return true;
+  }
   async function scheduleWork(next = schedule) {
     setBusy(true);
     setError("");
@@ -398,6 +415,8 @@ export default function Dashboard() {
               >
                 {section === "calendar" ? (
                   <WeeklyCalendar
+                    busy={busy}
+                    onMove={move}
                     events={schedule.events}
                     topics={schedule.topics}
                     tasks={schedule.tasks}

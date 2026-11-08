@@ -28,7 +28,7 @@ export const dateLabel = (date: Date) =>
     minute: "2-digit",
   });
 export const isPreserved = (block: StudyBlock, now: Date) =>
-  block.status !== "planned" || !!block.locked || block.startTime <= now;
+  block.status !== "planned" || !!block.locked || !!block.manuallyMoved || block.startTime <= now;
 
 /** Expand fixed commitments only. This never schedules assignment work. */
 export function expandEvents(events: Event[], start: Date, end: Date) {
@@ -48,6 +48,7 @@ export function expandEvents(events: Event[], start: Date, end: Date) {
         0,
       );
       if (from < event.startTime) continue;
+      if (event.excludedStarts?.includes(from.toISOString())) continue;
       const to = new Date(from);
       to.setHours(event.endTime.getHours(), event.endTime.getMinutes(), 0, 0);
       if (to <= from) to.setDate(to.getDate() + 1);

@@ -31,6 +31,29 @@ def minutes(blocks):
 
 
 class DashboardApiTests(unittest.TestCase):
+    def test_moved_weekly_occurrence_excludes_original_and_reserves_replacement(self):
+        self.payload["tasks"][0]["remaining_minutes"] = 60
+        self.payload["events"] = [
+            {"id": "series", "title": "Class", "start": "2026-11-10T09:00:00Z",
+             "end": "2026-11-10T10:00:00Z", "repeat_on": [2, 3],
+             "exclude_starts": ["2026-11-10T09:00:00Z"]},
+            {"id": "moved", "title": "Class", "start": "2026-11-10T10:00:00Z",
+             "end": "2026-11-10T12:00:00Z", "repeat_on": []},
+        ]
+        data = self.plan()
+        self.assertEqual(data["study_blocks"][0]["start"], "2026-11-10T09:00:00Z")
+        self.assertEqual(minutes(data["study_blocks"]), 60)
+
+    def test_manual_planned_reservation_reduces_demand_without_completing_work(self):
+        self.payload["locked_blocks"] = [{"id": "manual", "task_id": "statistics",
+            "start": "2026-11-10T10:00:00Z", "end": "2026-11-10T11:00:00Z",
+            "status": "planned", "locked": True}]
+        data = self.plan()
+        self.assertEqual(minutes(data["study_blocks"]) + 60 + sum(item["minutes"] for item in data["unscheduled"]), 240)
+        for block in data["study_blocks"]:
+            self.assertFalse(dt(block["start"]) < dt("2026-11-10T11:15:00Z") and
+                             dt(block["end"]) > dt("2026-11-10T09:45:00Z"))
+
     def test_imported_occurrences_reserve_exact_utc_instants(self):
         # Calendar imports expand weekly rules and exceptions before /schedule.
         # A moved class keeps its occurrence ID but sends the replacement time.

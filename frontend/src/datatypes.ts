@@ -61,6 +61,8 @@ export interface Event {
   remainingTimeMinutes: number;
   /** When set, repeat weekly on these days at the original local times. */
   repeatOn?: Weekday[];
+  /** Original UTC starts omitted from this weekly series after occurrence moves. */
+  excludedStarts?: string[];
   /** Imported occurrences are finite UTC instants, never local repeatOn rules. */
   calendarImport?: { uid: string; recurrenceId?: string; timezone: string };
   topicId?: string;
@@ -111,6 +113,8 @@ export interface StudyBlock {
   endTime: Date;
   status: "planned" | "completed" | "unfinished" | "skipped";
   locked?: boolean;
+  /** Reserve this placement during regeneration without finalizing progress. */
+  manuallyMoved?: boolean;
 }
 
 export interface SchedulingWarning {

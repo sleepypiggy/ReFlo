@@ -22,6 +22,7 @@ export function toScheduleRequest(schedule: Schedule, now = new Date()) {
       start: event.startTime.toISOString(),
       end: event.endTime.toISOString(),
       repeat_on: event.repeatOn ?? [],
+      exclude_starts: event.excludedStarts ?? [],
     })),
     preferences: {
       wake_up_time: schedule.preferences.sleepHours.wakeUpTime,

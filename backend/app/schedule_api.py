@@ -55,6 +55,7 @@ class EventInput(InputModel):
     start: Instant
     end: Instant
     repeat_on: list[Annotated[StrictInt, Field(ge=0, le=6)]] = Field(default_factory=list)
+    exclude_starts: list[Instant] = Field(default_factory=list, max_length=2000)
 
     @model_validator(mode="after")
     def ordered(self):
@@ -172,7 +173,7 @@ def event_windows(request: ScheduleRequest, horizon: datetime) -> list[Window]:
                 end = wall(day + timedelta(days=day_span), local_end.time(), zone)
                 if end <= start:
                     end = wall(day + timedelta(days=day_span + 1), local_end.time(), zone)
-                if start >= event.start:
+                if start >= event.start and start not in event.exclude_starts:
                     result.append(Window(start, end))
             day += timedelta(days=1)
     return result

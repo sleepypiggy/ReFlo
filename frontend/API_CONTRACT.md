@@ -63,9 +63,11 @@ FastAPI currently permits browser origins localhost:3000 and 127.0.0.1:3000.
   `repeat_on` uses JavaScript weekdays, Sunday 0 through Saturday 6. Empty means one-off.
   Repeats start no earlier than `start`, with no end date; expand only to the scheduling horizon.
   An overnight recurring event ends the following local day.
+  Optional `exclude_starts` lists UTC occurrence starts to omit from a weekly series.
+  Moving one occurrence excludes its original start and adds a one-off commitment.
 - `remaining_minutes` is authoritative and already reflects completed work. It can
   exceed the original estimate. Do not subtract historical sessions from it again.
-- `locked_blocks` includes every completed, unfinished, explicitly locked, past,
+- `locked_blocks` includes every manually moved, completed, unfinished, explicitly locked, past,
   and in-progress block (`start <= current_time`). Their IDs and records must be
   preserved. Treat their time ranges as occupied. Past planned blocks are historical
   reservations, not proof of completion.

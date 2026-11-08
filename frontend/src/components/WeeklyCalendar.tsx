@@ -2,6 +2,7 @@
 import FullCalendar, { type CalendarRef } from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
+import interactionPlugin from "@fullcalendar/react/interaction";
 import classicThemePlugin from "@fullcalendar/react/themes/classic";
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
@@ -10,6 +11,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Event, StudyBlock, Task, Topic } from "@/datatypes";
 import { expandEvents, weekStart } from "@/lib/calendar";
 import { colorPalette } from "@/lib/topics";
+import { canMoveStudy, type CalendarMove } from "@/lib/calendarMoves";
 
 export default function WeeklyCalendar({
   events,
@@ -18,6 +20,8 @@ export default function WeeklyCalendar({
   topics = [],
   onStudyClick,
   onEventClick,
+  onMove,
+  busy = false,
 }: {
   events: Event[];
   studyBlocks: StudyBlock[];
@@ -25,6 +29,8 @@ export default function WeeklyCalendar({
   topics?: Topic[];
   onStudyClick: (id: string) => void;
   onEventClick: (id: string) => void;
+  onMove: (move: CalendarMove) => boolean;
+  busy?: boolean;
 }) {
   const ref = useRef<CalendarRef>(null);
   const [title, setTitle] = useState("");
@@ -49,7 +55,7 @@ export default function WeeklyCalendar({
         className: `calendar-event fixed-event${color ? " topic-study" : ""}`,
         color: palette?.background ?? "var(--lecture-bg)",
         contrastColor: palette?.foreground ?? "var(--lecture-ink)",
-        extendedProps: { type: "fixed", eventId: event.id, topicName: topic?.name },
+        extendedProps: { type: "fixed", eventId: event.id, occurrenceStart: event.startTime, topicName: topic?.name },
       };
       }),
       ...studyBlocks.map((block) => {
@@ -64,6 +70,7 @@ export default function WeeklyCalendar({
           "Study session",
         start: block.startTime,
         end: block.endTime,
+        startEditable: canMoveStudy(block),
         color:
           block.status === "completed"
             ? "var(--surface-soft)"
@@ -150,7 +157,7 @@ export default function WeeklyCalendar({
         <FullCalendar
           className={`study-calendar calendar-${view}`}
           ref={ref}
-          plugins={[timeGridPlugin, dayGridPlugin, classicThemePlugin]}
+          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin, classicThemePlugin]}
           initialView="timeGridWeek"
           firstDay={1}
           headerToolbar={false}
@@ -164,9 +171,19 @@ export default function WeeklyCalendar({
           dayHeaderClass={(info) => `calendar-day-label${info.isToday ? " calendar-day-today" : ""}`}
           height={690}
           nowIndicator
-          editable={false}
-          eventStartEditable={false}
+          editable={!busy}
+          eventStartEditable={!busy}
           eventDurationEditable={false}
+          eventAllow={(_drop, event) => !busy && (event?.extendedProps.type !== "study" ||
+            studyBlocks.some(block => block.id === event.extendedProps.blockId && canMoveStudy(block)))}
+          eventDrop={(info) => {
+            const props = info.event.extendedProps;
+            const startTime = info.event.start;
+            if (!startTime || !onMove(props.type === "study"
+              ? { type: "study", id: props.blockId, startTime }
+              : { type: "fixed", id: props.eventId, occurrenceStart: new Date(props.occurrenceStart), startTime }))
+              info.revert();
+          }}
           events={calendarEvents}
           dayMaxEvents={3}
           dayHeaderFormat={view === "dayGridMonth" ? { weekday: "short" } : { weekday: "short", day: "numeric" }}
@@ -237,7 +254,7 @@ export default function WeeklyCalendar({
             Unfinished / skipped
           </span>
         </div>
-        <span className="muted small">Click a session to update progress</span>
+        <span className="muted small">Drag to move; click a session to update progress</span>
       </div>
     </section>
   );
