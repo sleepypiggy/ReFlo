@@ -274,7 +274,7 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   font-family: inherit;
   font-size: 12px;
 }
-[data-theme], .study-calendar {
+:root[data-theme], .study-calendar {
   --fc-classic-background: var(--canvas);
   --fc-classic-border: var(--hairline);
   --fc-classic-strong-border: var(--hairline-strong);
