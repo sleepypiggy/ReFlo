@@ -121,9 +121,17 @@ to real mode starts an empty independent workspace. FullCalendar only renders st
 
 ## Implemented scheduling rules and limits
 
-- Assignments share free time and daily study capacity. Allocate by earliest
-  deadline, then higher grade weight, then task ID; this is deterministic priority
-  ordering, not an AI estimate or an interactive priority-selection dialog.
+- Assignments share free time and daily study capacity. Allocate by higher grade
+  weight first, then earliest deadline when weights match, then task ID for a
+  deterministic final tie. A later-deadline higher-weight assignment can take
+  time from an earlier-deadline lower-weight assignment. There is no separate
+  manual priority field.
+- The shortage panel compares total remaining demand with the minutes covered by
+  the current plan and lists unscheduled minutes for each affected task. These
+  are allocations under the current weights and constraints, not a claim of
+  raw free time or a globally optimal allocation. Users can edit grade weights
+  and deadlines and regenerate. Edits persist even if regeneration fails; existing sessions
+  are replaced only after a successful response. Demo mode does not reallocate.
 - Daily limits use the requested timezone and count locked sessions on each day.
   New sessions have whole-minute durations; the current time rounds forward and
   free-window ends round backward so fractional seconds never cause overlap.

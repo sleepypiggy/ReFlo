@@ -97,6 +97,9 @@ export default function AssignmentForm({
           />
         </label>
       </div>
+      <p className="muted small">
+        Higher grade weights get study time first. Equal weights use the closest deadline.
+      </p>
       {task && (
         <p className="muted small">
           Editing the estimate preserves the amount of work already recorded.

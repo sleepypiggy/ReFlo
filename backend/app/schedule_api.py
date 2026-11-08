@@ -199,7 +199,7 @@ def minutes_in_day(block: Window, start: datetime, end: datetime) -> float:
 
 @router.post("/schedule", response_model=ScheduleResponse)
 def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
-    """Allocate shared availability by earliest deadline, then grade weight/ID.
+    """Allocate by higher grade weight, then earliest deadline and task ID.
 
     Return new sessions only. Locked history remains owned by the frontend.
     Historical entries never imply completed work. Future portions of still-
@@ -216,7 +216,7 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
     output = []
     warnings = []
     used_ids = {block.id for block in request.locked_blocks}
-    for task in sorted(request.tasks, key=lambda item: (item.deadline, -item.grade_weight, item.id)):
+    for task in sorted(request.tasks, key=lambda item: (-item.grade_weight, item.deadline, item.id)):
         reserved = sum(max(0, int((block.end - max(block.start, request.current_time)).total_seconds() // 60))
                        for block in request.locked_blocks
                        if block.task_id == task.id and block.status == "planned")

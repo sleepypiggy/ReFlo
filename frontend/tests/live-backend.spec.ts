@@ -6,6 +6,72 @@ async function savedPlan(page: Page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend);
 }
 
+test("grade weight controls allocation, tied weights use deadline, and edits persist", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-13T08:00:00-08:00"));
+  await page.addInitScript(() => {
+    if (localStorage.getItem("schedule-maker:v1")) return;
+    const schedule = {
+      weekStart: "2026-11-09T00:00:00-08:00", source: "backend",
+      tasks: [
+        { id: "essay", name: "Essay", estimatedTimeMinutes: 180, remainingTimeMinutes: 180,
+          deadline: "2026-11-13T13:00:00-08:00", gradeWeight: 40 },
+        { id: "math", name: "Math", estimatedTimeMinutes: 180, remainingTimeMinutes: 180,
+          deadline: "2026-11-13T14:00:00-08:00", gradeWeight: 10 },
+      ],
+      events: [], studyBlocks: [], warnings: [],
+      preferences: { maxStudyTimeMinutes: 240, maxSessionTimeMinutes: 60,
+        breakDurationMinutes: 0, sleepHours: { wakeUpTime: "09:00", bedtime: "14:00" } },
+    };
+    localStorage.setItem("schedule-maker:v1", JSON.stringify({
+      mode: "backend", backend: schedule, demo: { ...schedule, source: "demo" },
+    }));
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  const panel = page.getByRole("region", { name: "Not all work fits" });
+  await expect(panel).toContainText("6h of work");
+  await expect(panel).toContainText("current plan fits 4h");
+  await expect(panel).toContainText("2h remains unscheduled");
+  expect((await savedPlan(page)).warnings[0]).toMatchObject({ taskId: "math", unscheduledMinutes: 120 });
+  async function editWeight(weight: string) {
+    await page.getByRole("button", { name: "Edit Math", exact: true }).click();
+    await page.getByLabel("Grade weight (%)").fill(weight);
+    await page.getByRole("button", { name: "Save assignment", exact: true }).click();
+  }
+  async function generate() {
+    const response = page.waitForResponse(r => r.url().endsWith("/schedule") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+    const data = await (await response).json();
+    await expect(page.getByText("Your study schedule has been updated.", { exact: true })).toBeVisible();
+    return data;
+  }
+  // Higher weight wins despite Math's later deadline.
+  await editWeight("80");
+  const result = await generate();
+  expect(result.unscheduled).toEqual([expect.objectContaining({ task_id: "essay", minutes: 120 })]);
+  await page.reload();
+  await expect(page.locator(".assignment").filter({ hasText: "Math" })).toContainText("80% of grade");
+  expect((await savedPlan(page)).warnings[0].taskId).toBe("essay");
+
+  // Equal weights give the earlier-deadline Essay its full three hours.
+  await editWeight("40");
+  const tied = await generate();
+  expect(tied.unscheduled).toEqual([expect.objectContaining({ task_id: "math", minutes: 120 })]);
+
+  // A failed replan keeps the current sessions and the student's new weight.
+  const previousBlocks = (await savedPlan(page)).studyBlocks;
+  await page.route("**/schedule", route => route.abort());
+  await editWeight("10");
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await expect(page.locator(".error-banner")).toBeVisible();
+  const failed = await savedPlan(page);
+  expect(failed.studyBlocks).toEqual(previousBlocks);
+  expect(failed.tasks.find((task: { id: string }) => task.id === "math").gradeWeight).toBe(10);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test("real Python planning, unfinished work, work-shift shortage, and persistence", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-11-10T15:00:00-07:00"));
   await page.addInitScript(() => {
