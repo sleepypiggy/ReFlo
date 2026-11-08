@@ -85,7 +85,7 @@ class PreferencesInput(InputModel):
     wake_up_time: Clock
     bedtime: Clock
     max_daily_study_minutes: DailyMinutes
-    max_session_minutes: DailyMinutes
+    max_session_minutes: Annotated[StrictInt, Field(ge=15, le=1440)]
     break_minutes: Annotated[StrictInt, Field(ge=0, le=1440)]
     spread_assignments: StrictBool = True
 
@@ -518,6 +518,9 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
         result.append(ScheduledBlock(id=identifier, task_id=task_id, start=start, end=end))
     scheduled = _totals(output)
     warnings = [Shortage(task_id=task.id, minutes=demand[task.id] - scheduled.get(task.id, 0),
-                        reason="Work could not be placed before the deadline with a 15-minute minimum study block under your preferences and priority policy.")
+                        reason=("Remaining unscheduled work is below the 15-minute minimum study block; "
+                                "your work estimate has not been rounded up."
+                                if demand[task.id] - scheduled.get(task.id, 0) < 15 else
+                                "Work could not be placed before the deadline with a 15-minute minimum study block under your preferences and priority policy."))
                 for task in tasks if demand[task.id] > scheduled.get(task.id, 0)]
     return ScheduleResponse(study_blocks=result, unscheduled=warnings)

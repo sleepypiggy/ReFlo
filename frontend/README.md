@@ -121,6 +121,11 @@ files, downloads and re-importing exported instants. `npm run test:live -- --gre
 
 ## Planning controls and backups
 
+- Maximum session length must be at least 15 minutes, matching `/schedule`.
+  Smaller remaining work stays valid and is shown as unscheduled with an
+  explanation; estimates are never rounded up. Older saved workspaces and JSON
+  backups with smaller positive session limits are normalized to 15 without
+  losing data, and affected plans are marked for regeneration.
 - Scheduling first tries to fit all work in deadline order. If it cannot, the
   teammate's policy ranks work by grade weight multiplied by remaining work
   relative to available study capacity. There is no manual priority override.

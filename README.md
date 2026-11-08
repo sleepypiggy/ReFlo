@@ -63,6 +63,11 @@ See [the spacing contract](frontend/API_CONTRACT.md#study-spacing) for details.
 New study sessions have a 15-minute minimum. Session lengths can vary (for
 example, 60 + 45 minutes); small gaps are skipped rather than turned into tiny
 sessions. Any work that cannot fit under these limits is shown as unscheduled.
+Preferences and `/schedule` require a session maximum of at least 15 minutes.
+Older saved preferences and backups with smaller positive limits are upgraded to
+15 and flagged for plan regeneration without losing workspace data. Assignments
+with less than 15 minutes remaining stay valid, with their exact minutes shown
+as unscheduled and a specific explanation. `/api/plan` keeps its legacy behavior.
 
 In Real backend mode, adding, editing or importing a fixed event that overlaps
 future study automatically regenerates the plan. Event times stay fixed; study

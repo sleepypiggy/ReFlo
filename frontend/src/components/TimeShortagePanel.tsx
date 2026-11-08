@@ -43,7 +43,7 @@ export default function TimeShortagePanel({ schedule, demo }: {
         {schedule.warnings.map((warning, index) => (
           <li key={`${warning.taskId}-${index}`}>
             <strong>{schedule.tasks.find((task) => task.id === warning.taskId)?.name}</strong>
-            : {time(warning.unscheduledMinutes)} unscheduled — {demo ? warning.reason : "Work could not be placed before the deadline under your current preferences."}
+            : {time(warning.unscheduledMinutes)} unscheduled — {warning.reason}
           </li>
         ))}
       </ul>

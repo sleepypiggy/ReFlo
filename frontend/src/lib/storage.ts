@@ -74,7 +74,8 @@ function revive(value: Schedule): Schedule {
   return {
     ...value,
     topics,
-    needsReplan: value.needsReplan ?? false,
+    preferences: { ...preferences, maxSessionTimeMinutes: Math.max(15, preferences.maxSessionTimeMinutes) },
+    needsReplan: preferences.maxSessionTimeMinutes < 15 || (value.needsReplan ?? false),
     weekStart: date(value.weekStart),
     tasks: value.tasks.map((task) => {
       positive(task.estimatedTimeMinutes);
