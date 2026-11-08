@@ -6,7 +6,7 @@ Current integrated application checks:
 - Frontend calendar, task, topic, plan-accounting and backup validation: **71 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
-- `npm run test:e2e`: **20 passed** in Microsoft Edge against the production build.
+- `npm run test:e2e`: **21 passed** in Microsoft Edge against the production build.
 - `npm run test:live`: **7 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
@@ -114,3 +114,23 @@ text; the session dialog exposes the reason on keyboard and mobile. Browser
 coverage verifies past/started/locked reasons and automatic updates when a future
 session starts. Unit coverage also includes finalized statuses, exact boundaries,
 and draggable manual placements. The mobile dialog was visually checked.
+
+Compact calendar layout uses actual block height to hide extra labels, truncate
+titles and retain small lock/update icons. All event content clips to its block;
+full names and time ranges remain in tooltips, accessible labels and dialogs.
+Browser coverage checks adjacent 10/15-minute commitments and study, clipping
+bounds, unchanged relative heights, week/day/month views and mobile width.
+Desktop and mobile screenshots were visually reviewed.
+
+The compact-block regression also verifies that one-hour study sessions retain
+their visible time range and title in both week and day views, with both rows
+contained inside the block. Only blocks too short for two rows hide the time.
+
+Study and fixed-event typography is checked for matching padding, title font
+size/weight/line height, time font size/line height, and time-to-title spacing,
+including a one-hour study block beside a taller fixed event.
+
+Topic rows have an explicit line height and appear only when the whole line fits.
+The regression covers a 75-minute event at the intermediate height, a taller
+event, and a shorter assignment with the complete topic retained in its tooltip.
+Update text yields to the topic row and uses its inline icon in smaller blocks.

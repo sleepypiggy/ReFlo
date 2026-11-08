@@ -52,6 +52,13 @@ started, locked, completed, unfinished or skipped history. Move failures explain
 deadline, sleep, fixed-event, break and daily-limit conflicts without changing
 the saved plan. Indicators refresh as sessions reach their start time.
 
+Short calendar blocks use compact, truncated titles and small status icons so
+text stays within its block. Time ranges remain visible whenever a time row and
+title row fit; only the smallest blocks hide the time row. Taller blocks also
+retain topic labels. Hover
+for full details or open a block to view its complete title and times. This
+changes the display only; event and study durations are preserved.
+
 ## Study Spacing
 
 The dashboard now spreads assignment work across available days by default, with

@@ -7,9 +7,9 @@ import classicThemePlugin from "@fullcalendar/react/themes/classic";
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
 import "@fullcalendar/react/themes/classic/palette.css";
-import { ChevronLeft, ChevronRight, LockKeyhole } from "lucide-react";
+import { ChevronLeft, ChevronRight, LockKeyhole, Sparkles } from "lucide-react";
 import type { Event, StudyBlock, Task, Topic } from "@/datatypes";
-import { expandEvents, weekStart } from "@/lib/calendar";
+import { dateLabel, expandEvents, weekStart } from "@/lib/calendar";
 import { colorPalette } from "@/lib/topics";
 import { canMoveStudy, studyMoveReason, type CalendarMove } from "@/lib/calendarMoves";
 
@@ -220,19 +220,30 @@ export default function WeeklyCalendar({
               onStudyClick(info.event.extendedProps.blockId);
             else onEventClick(info.event.extendedProps.eventId);
           }}
-          eventContent={(info) => (
-            <div className="calendar-event-content" title={info.event.extendedProps.moveReason ?? undefined}
+          eventContent={(info) => {
+            const details = [info.event.title,
+              info.event.start && dateLabel(info.event.start),
+              info.event.end && dateLabel(info.event.end),
+              info.event.extendedProps.status ?? "Fixed commitment",
+              info.event.extendedProps.topicName,
+              info.event.extendedProps.changed && "Updated",
+              info.event.extendedProps.moveReason,
+            ].filter(Boolean).join(" · ");
+            return (
+            <div className="calendar-event-content" title={details}
               ref={element => {
-                element?.closest(".calendar-event")?.setAttribute("title", info.event.extendedProps.moveReason
+                const block = element?.closest(".calendar-event");
+                block?.setAttribute("aria-label", details);
+                block?.setAttribute("title", info.event.extendedProps.moveReason
                   ? `${info.event.title} — ${info.event.extendedProps.moveReason}` : info.event.title);
               }}>
               <div className="calendar-event-time">{info.timeText}</div>
-              <div className="calendar-event-title">{info.event.extendedProps.moveReason && <LockKeyhole className="session-lock-icon" size={12} aria-hidden="true" />}{info.event.title}</div>
+              <div className="calendar-event-title">{info.event.extendedProps.moveReason && <LockKeyhole className="session-lock-icon" size={12} aria-hidden="true" />}{info.event.extendedProps.changed && <Sparkles className="calendar-update-icon" size={12} aria-hidden="true" />}{info.event.title}</div>
               {info.event.extendedProps.moveReason && <span className="move-reason-text">{info.event.extendedProps.moveReason}</span>}
-              {info.event.extendedProps.changed && <div className="calendar-change-label">Updated</div>}
               {info.event.extendedProps.topicName && <div className="calendar-event-topic">{info.event.extendedProps.topicName}</div>}
+              {info.event.extendedProps.changed && <div className="calendar-change-label">Updated</div>}
             </div>
-          )}
+          ); }}
           eventDidMount={(info) => {
             info.el.setAttribute("tabindex", "0");
             info.el.setAttribute("title", info.event.extendedProps.moveReason
