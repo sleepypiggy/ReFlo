@@ -27,6 +27,7 @@ export default function PreferencesPanel({
       maxStudyTimeMinutes,
       maxSessionTimeMinutes,
       breakDurationMinutes,
+      spreadAssignments: data.get("spread") === "on",
       sleepHours: { bedtime, wakeUpTime },
     });
   }
@@ -91,6 +92,11 @@ export default function PreferencesPanel({
           defaultValue={preferences.breakDurationMinutes}
         />
       </label>
+      <label className="checkbox-label">
+        <input name="spread" type="checkbox" defaultChecked={preferences.spreadAssignments ?? true} />
+        Spread study sessions across days
+      </label>
+      <p className="muted small">Balance work across days and morning, afternoon, and evening slots when available. Conflicts, sleep and deadlines take priority; tight days may still need consecutive sessions.</p>
       {error && (
         <p className="error" role="alert">
           {error}

@@ -10,6 +10,7 @@ export const defaultPreferences: Preferences = {
   maxStudyTimeMinutes: 240,
   maxSessionTimeMinutes: 90,
   breakDurationMinutes: 15,
+  spreadAssignments: true,
   sleepHours: { bedtime: "23:00", wakeUpTime: "07:00" },
 };
 

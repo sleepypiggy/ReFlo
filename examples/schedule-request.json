@@ -18,7 +18,8 @@
     "bedtime": "12:00",
     "max_daily_study_minutes": 120,
     "max_session_minutes": 60,
-    "break_minutes": 15
+    "break_minutes": 15,
+    "spread_assignments": false
   },
   "locked_blocks": []
 }

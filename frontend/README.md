@@ -85,3 +85,32 @@ the footer in both themes and on mobile.
 The backend now includes `/assistant/parse`, but an assistant input and a proposed
 schedule preview with Apply/Cancel are not yet part of this dashboard. See
 [assistant setup](../docs/ASSISTANT_API.md).
+
+## Spread assignment work
+
+In **Preferences**, **Spread study sessions across days** is enabled by default.
+After saving, use **Generate Schedule** in Real backend mode to update existing
+blocks. Work is balanced across available days and sessions are separated more
+when time allows. If a deadline is tight, the scheduler keeps the work scheduled
+with the normal minimum breaks. Disable the preference to fill the earliest slots.
+Demo mode still replays authored sample sessions.
+
+## A 400 after updating the backend
+
+If validation mentions `preferences.spread_assignments` and "Extra inputs are not
+permitted", an old Python server is still running. Stop the backend terminal with
+Ctrl+C, then start a single current instance from the repository root:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m uvicorn backend.app.main:app --reload --reload-dir backend/app --port 8000
+```
+
+Keep only one backend instance on port 8000. Refresh the dashboard and generate
+again. API errors now include the rejected field and the backend's explanation;
+failed generation preserves the existing calendar.
+
+With spacing enabled, sessions also prefer a mix of morning, afternoon and evening
+slots, rather than repeatedly starting in the morning. Only conflict-free waking
+time before the deadline is used. If a period is unavailable, the scheduler uses
+another period or keeps the existing feasible placement. Save preferences and
+click Generate Schedule to update your calendar.

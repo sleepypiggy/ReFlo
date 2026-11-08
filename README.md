@@ -46,6 +46,18 @@ restore work for both demo and real workspaces, with validation and confirmation
 See [the frontend guide](frontend/README.md#planning-controls-and-backups) for details.
 Automated project checks are defined in `.github/workflows/checks.yml`.
 
+## Study Spacing
+
+The dashboard now spreads assignment work across available days by default, with
+more space between new sessions when it fits. Tight deadlines can still require
+consecutive sessions. Toggle **Spread study sessions across days** in Preferences
+and regenerate to apply it. Scheduled minutes and shortage priorities are preserved.
+See [the spacing contract](frontend/API_CONTRACT.md#study-spacing) for details.
+
+New study sessions have a 15-minute minimum. Session lengths can vary (for
+example, 60 + 45 minutes); small gaps are skipped rather than turned into tiny
+sessions. Any work that cannot fit under these limits is shown as unscheduled.
+
 ## API Integration
 
 The optional Gemini `POST /assistant/parse` endpoint is also integrated. See

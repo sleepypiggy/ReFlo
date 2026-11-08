@@ -29,6 +29,7 @@ export function toScheduleRequest(schedule: Schedule, now = new Date()) {
       max_daily_study_minutes: schedule.preferences.maxStudyTimeMinutes,
       max_session_minutes: schedule.preferences.maxSessionTimeMinutes,
       break_minutes: schedule.preferences.breakDurationMinutes,
+      spread_assignments: schedule.preferences.spreadAssignments ?? true,
     },
     locked_blocks: schedule.studyBlocks
       .filter((block) => isPreserved(block, now))

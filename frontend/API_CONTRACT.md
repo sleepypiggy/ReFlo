@@ -40,7 +40,8 @@ FastAPI currently permits browser origins localhost:3000 and 127.0.0.1:3000.
     "bedtime": "23:00",
     "max_daily_study_minutes": 240,
     "max_session_minutes": 90,
-    "break_minutes": 15
+    "break_minutes": 15,
+    "spread_assignments": true
   },
   "locked_blocks": [
     {
@@ -204,3 +205,59 @@ remote storage are involved.
 
 Changes to inputs set a persisted `needsReplan` flag. Old shortages are labeled as
 belonging to the previous plan; regenerate to clear the badge and update totals.
+
+## Study spacing
+
+New `/schedule` study blocks are at least **15 minutes**, whether spacing is
+enabled or disabled. The preferred session length is a maximum, not a required
+length: 105 minutes can become 60 + 45, and 68 minutes can become 53 + 15.
+Small gaps are skipped and daily balancing may use uneven blocks to avoid tiny
+remainders. Fixed events, breaks, deadlines and maximum study limits still apply.
+Minutes that cannot fit in a valid block remain in `unscheduled`; work is never
+rounded up. This includes assignments with fewer than 15 minutes remaining or a
+configured session maximum below 15 minutes. Existing locked history is preserved.
+The legacy single-assignment `/api/plan` prototype retains its original behavior.
+
+`preferences.spread_assignments` is optional and defaults to `true`. The frontend
+sends the saved **Spread study sessions across days** preference, also defaulting
+to enabled for existing workspaces.
+
+Admission and shortage priority remain unchanged. After deciding the scheduled
+minutes for each task, a separate spacing pass tries to lower peak daily work and
+spread each assignment's admitted minutes across available local days. It prefers
+useful daily chunks (around 30 minutes or the student's smaller session limit)
+rather than dividing a small task into many minute-long visits. If feasible, it
+also leaves at least an hour between new sessions; the configured break duration
+remains the minimum. Locked history retains its original break rules.
+
+Spacing is soft: every candidate must retain exactly the admitted minutes for
+every task. Busy days, fragmented windows and tight deadlines can require larger
+daily shares or the original earliest-slot plan. The pass does not change sleep,
+fixed events, deadlines, daily/session limits, historical records, or which work
+is unscheduled. Identical requests retain deterministic session IDs.
+
+Set the flag to `false` for the original earliest-slot placement. The original
+four-block demo fixture at `examples/schedule-request.json` explicitly disables
+spacing so its 240/0, 180/0 and 120/60 regression results stay reproducible.
+The real browser spacing test verifies that four hours with four open days become
+one hour per day and that toggling the preference restores earliest packing.
+
+### Morning, afternoon and evening placement
+
+With spacing enabled, a final pass tries to place separate sessions in different
+local-time periods: morning before noon, afternoon from noon to 17:00, and evening
+from 17:00 onward. Every period is clipped to waking hours, current time, the
+assignment deadline, fixed commitments and locked history. It also varies the
+period used for an assignment's single daily session across days, using only
+periods with a fitting free interval.
+
+A day's already-feasible sessions retain their task, duration and local date.
+The pass favors periods with less study time and attempts generous gaps, then
+relaxes to the student's minimum break if needed. If the day cannot be rearranged
+safely, it retains that day's prior placement. Neighboring days are protected,
+so moving an evening session cannot violate breaks or sessions on the next day.
+No extra work becomes unscheduled to satisfy a preferred time period.
+
+For example, three one-hour sessions with a free 09:00-22:00 day can start at
+09:00, 12:00 and 17:00. A noon-to-13:00 meeting moves the afternoon session to
+13:00. If only the afternoon is free, all work may remain in the afternoon.

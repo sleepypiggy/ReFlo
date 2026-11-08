@@ -18,7 +18,7 @@ def payload():
         ],
         "events": [], "locked_blocks": [],
         "preferences": {"wake_up_time": "09:00", "bedtime": "14:00",
-                        "max_daily_study_minutes": 240, "max_session_minutes": 60, "break_minutes": 0},
+                        "max_daily_study_minutes": 240, "max_session_minutes": 60, "break_minutes": 0, "spread_assignments": False},
     }
 
 
@@ -158,15 +158,15 @@ class PriorityTests(unittest.TestCase):
         self.assertEqual({block.start.day for block in result.study_blocks if block.task_id == "math"}, {14})
 
     def test_small_no_break_cases_against_exhaustive_feasibility(self):
-        # Independent minute-slot oracle: a commitment removes 09:01-09:02,
-        # and the daily cap leaves only two of the three free minutes usable.
+        # Independent 15-minute-slot oracle: a commitment removes 09:15-09:30,
+        # and the daily cap leaves only two of the three free slots usable.
         for effort_a, effort_b, due_a, due_b in product(range(1, 4), range(1, 4), (2, 4), (2, 4)):
             data = payload()
-            data["preferences"].update(bedtime="09:04", max_daily_study_minutes=2, max_session_minutes=1)
-            data["events"] = [{"id": "busy", "title": "Busy", "start": "2026-11-13T09:01:00Z",
-                               "end": "2026-11-13T09:02:00Z", "repeat_on": []}]
+            data["preferences"].update(bedtime="10:00", max_daily_study_minutes=30, max_session_minutes=15)
+            data["events"] = [{"id": "busy", "title": "Busy", "start": "2026-11-13T09:15:00Z",
+                               "end": "2026-11-13T09:30:00Z", "repeat_on": []}]
             for task, effort, due in zip(data["tasks"], (effort_a, effort_b), (due_a, due_b)):
-                task.update(remaining_minutes=effort, deadline=f"2026-11-13T09:0{due}:00Z")
+                task.update(remaining_minutes=effort * 15, deadline="2026-11-13T" + ("09:30" if due == 2 else "10:00") + ":00Z")
             feasible = any(
                 assignments.count(0) == effort_a and assignments.count(1) == effort_b
                 and sum(value != -1 for value in assignments) <= 2

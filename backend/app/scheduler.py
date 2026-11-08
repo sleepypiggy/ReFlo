@@ -36,17 +36,21 @@ def schedule_assignment(
     windows: Iterable[Window],
     max_session_minutes: int = 60,
     break_minutes: int = 15,
+    min_session_minutes: int = 1,
 ) -> Schedule:
     """Fill earliest windows, stopping at the deadline or requested duration.
 
     Overlapping/touching windows are merged. Breaks apply between all blocks,
     including blocks in different windows. All datetimes must be mutually
     comparable (for example, all naive local times).
+    A minimum session length skips smaller gaps and redistributes short tails
+    when possible. Unplaceable minutes remain unscheduled, never rounded up.
     """
     for name, value, minimum in (
         ("duration_minutes", assignment.duration_minutes, 0),
         ("max_session_minutes", max_session_minutes, 1),
         ("break_minutes", break_minutes, 0),
+        ("min_session_minutes", min_session_minutes, 1),
     ):
         if type(value) is not int or value < minimum:
             raise ValueError(f"{name} must be an integer >= {minimum}")
@@ -71,7 +75,12 @@ def schedule_assignment(
         while remaining > 0:
             available = (window.end - start) // timedelta(minutes=1)
             minutes = min(remaining, max_session_minutes, available)
-            if minutes <= 0:
+            # Leave a useful final session rather than, for example, 60 + 8.
+            # Sessions may be uneven; 53 + 15 preserves the same 68 minutes.
+            tail = remaining - minutes
+            if 0 < tail < min_session_minutes and minutes - (min_session_minutes - tail) >= min_session_minutes:
+                minutes -= min_session_minutes - tail
+            if minutes < min_session_minutes:
                 break
             end = start + timedelta(minutes=minutes)
             blocks.append(StudyBlock(assignment.title, start, end))

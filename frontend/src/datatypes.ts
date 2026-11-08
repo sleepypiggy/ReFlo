@@ -59,6 +59,7 @@ export interface Preferences {
     wakeUpTime: string;
   };
   breakDurationMinutes: number;
+  spreadAssignments?: boolean;
 }
 
 /** A skipped calendar entry retained after its task becomes unscheduled. */

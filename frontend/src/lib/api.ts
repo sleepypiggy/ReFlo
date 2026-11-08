@@ -1,5 +1,6 @@
 import type { Schedule } from "@/datatypes";
 import { fromScheduleResponse, toScheduleRequest } from "./apiAdapter";
+import { formatApiError } from "./apiErrors";
 
 export const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -12,12 +13,11 @@ async function request(path: string, init?: RequestInit) {
       signal: AbortSignal.timeout(15000),
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
-    if (!response.ok)
-      throw new Error(
-        response.status === 404 && path === "/schedule"
-          ? "The backend /schedule endpoint is not implemented yet. Your existing schedule is preserved."
-          : `Backend request failed (${response.status}). Your existing schedule is preserved.`,
-      );
+    if (!response.ok) {
+      let details: unknown;
+      try { details = await response.json(); } catch { /* Non-JSON proxy errors still show their HTTP status. */ }
+      throw new Error(formatApiError(response.status, path, details));
+    }
     return (await response.json()) as unknown;
   } catch (error) {
     if (error instanceof TypeError)

@@ -43,6 +43,8 @@ function revive(value: Schedule): Schedule {
   positive(preferences.maxStudyTimeMinutes);
   positive(preferences.maxSessionTimeMinutes);
   positive(preferences.breakDurationMinutes, true);
+  if (preferences.spreadAssignments !== undefined && typeof preferences.spreadAssignments !== "boolean")
+    throw new Error("Invalid study spacing preference");
   for (const time of [preferences.sleepHours.bedtime, preferences.sleepHours.wakeUpTime])
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))
       throw new Error("Invalid saved sleep time");

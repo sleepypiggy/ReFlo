@@ -152,7 +152,7 @@ test("backend generation serializes data, preserves blocks on errors, and locks 
   await page.getByLabel("Data source").selectOption("backend");
   await expect(page.locator(".calendar-event")).toHaveCount(0);
   await addTask(page, "Backend assignment");
-  let responseMode: "success" | "failure" | "malformed" | "network" = "success";
+  let responseMode: "success" | "failure" | "malformed" | "network" | "validation" = "success";
   let calls = 0;
   await page.route("http://localhost:8000/schedule", async (route) => {
     const body = route.request().postDataJSON();
@@ -168,6 +168,13 @@ test("backend generation serializes data, preserves blocks on errors, and locks 
     }
     if (responseMode === "failure") {
       await route.fulfill({ status: 404, json: { detail: "Not found" } });
+      return;
+    }
+    if (responseMode === "validation") {
+      await route.fulfill({ status: 400, json: {
+        error: "Extra inputs are not permitted",
+        details: [{ loc: ["body", "preferences", "spread_assignments"], msg: "Extra inputs are not permitted", type: "extra_forbidden" }],
+      } });
       return;
     }
     if (responseMode === "malformed") {
@@ -219,6 +226,11 @@ test("backend generation serializes data, preserves blocks on errors, and locks 
   await expect(page.locator(".error, .error-banner")).toContainText(
     "not implemented",
   );
+  await expect(page.locator(".study-event")).toHaveCount(1);
+  responseMode = "validation";
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await expect(page.locator(".error-banner")).toContainText("preferences.spread_assignments");
+  await expect(page.locator(".error-banner")).toContainText("Restart the Python backend");
   await expect(page.locator(".study-event")).toHaveCount(1);
   responseMode = "malformed";
   await page

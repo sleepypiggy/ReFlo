@@ -6,6 +6,83 @@ async function savedPlan(page: Page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend);
 }
 
+test("spacing preference distributes real study work and can restore earliest packing", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
+  await page.goto("/");
+  await page.getByLabel("Data source").selectOption("backend");
+  await page.getByRole("button", { name: "Add Assignment", exact: true }).click();
+  await page.getByLabel("Assignment name").fill("Spaced assignment");
+  await page.getByLabel("Deadline", { exact: true }).fill("2026-11-13T17:00");
+  await page.getByLabel("Estimated hours").fill("4");
+  await page.getByRole("dialog").getByRole("button", { name: "Add assignment", exact: true }).click();
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await expect(page.getByLabel("Spread study sessions across days")).toBeChecked();
+  await page.getByLabel("Wake-up time").fill("09:00");
+  await page.getByLabel("Bedtime", { exact: true }).fill("17:00");
+  await page.getByLabel("Maximum session (minutes)").fill("60");
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await expect(page.locator(".study-event")).toHaveCount(4);
+  await expect(page.locator(".plan-dirty")).toHaveCount(0);
+  const spread = await savedPlan(page);
+  expect(new Set(spread.studyBlocks.map((block: { startTime: string }) => block.startTime.slice(0, 10))).size).toBe(4);
+  expect(spread.warnings).toEqual([]);
+
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await page.getByLabel("Spread study sessions across days").uncheck();
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await page.reload();
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await expect(page.getByLabel("Spread study sessions across days")).not.toBeChecked();
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await expect(page.locator(".plan-dirty")).toHaveCount(0);
+  const packed = await savedPlan(page);
+  expect(packed.studyBlocks).toHaveLength(4);
+  expect(new Set(packed.studyBlocks.map((block: { startTime: string }) => block.startTime.slice(0, 10))).size).toBe(1);
+
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await page.getByLabel("Spread study sessions across days").check();
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await expect(page.locator(".plan-dirty")).toHaveCount(0);
+  expect((await savedPlan(page)).studyBlocks).toEqual(spread.studyBlocks);
+  await page.screenshot({ path: "test-results/spread-schedule.png", fullPage: true });
+});
+
+test("real study sessions use morning afternoon and evening around conflicts", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
+  await page.goto("/");
+  await page.getByLabel("Data source").selectOption("backend");
+  await page.getByRole("button", { name: "Add Assignment", exact: true }).click();
+  await page.getByLabel("Assignment name").fill("Daytime variety");
+  await page.getByLabel("Deadline", { exact: true }).fill("2026-11-10T22:00");
+  await page.getByLabel("Estimated hours").fill("3");
+  await page.getByRole("dialog").getByRole("button", { name: "Add assignment", exact: true }).click();
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await page.getByLabel("Wake-up time").fill("09:00");
+  await page.getByLabel("Bedtime", { exact: true }).fill("22:00");
+  await page.getByLabel("Maximum session (minutes)").fill("60");
+  await page.getByRole("button", { name: "Save preferences" }).click();
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await expect(page.locator(".study-event")).toHaveCount(3);
+  await expect(page.locator(".plan-dirty")).toHaveCount(0);
+  const hours = () => page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend.studyBlocks
+    .map((block: { startTime: string }) => new Date(block.startTime).getHours()));
+  expect(await hours()).toEqual([9, 12, 17]);
+
+  await page.getByRole("button", { name: "Add Event", exact: true }).click();
+  await page.getByLabel("Event name").fill("Lunch meeting");
+  await page.getByLabel("Start datetime").fill("2026-11-10T12:00");
+  await page.getByLabel("End datetime").fill("2026-11-10T13:00");
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
+  await expect(page.locator(".plan-dirty")).toHaveCount(0);
+  expect(await hours()).toEqual([9, 13, 17]);
+  expect((await savedPlan(page)).warnings).toEqual([]);
+  await page.screenshot({ path: "test-results/daypart-schedule.png", fullPage: true });
+});
+
 test("weighted pressure controls shortage, tied scores use deadline, and edits persist", async ({ page }) => {
   // Stay before the first waking slot even if browser and Python timezone data
   // differ by an hour; an already-started block becomes locked on regeneration.
@@ -22,7 +99,7 @@ test("weighted pressure controls shortage, tied scores use deadline, and edits p
       ],
       events: [], studyBlocks: [], warnings: [],
       preferences: { maxStudyTimeMinutes: 240, maxSessionTimeMinutes: 60,
-        breakDurationMinutes: 0, sleepHours: { wakeUpTime: "09:00", bedtime: "14:00" } },
+        breakDurationMinutes: 0, spreadAssignments: false, sleepHours: { wakeUpTime: "09:00", bedtime: "14:00" } },
     };
     localStorage.setItem("schedule-maker:v1", JSON.stringify({
       mode: "backend", backend: schedule, demo: { ...schedule, source: "demo" },
@@ -89,6 +166,9 @@ test("real skip failures preserve work and history, retry and undo are safe", as
   await page.getByLabel("Deadline", { exact: true }).fill("2026-11-06T17:00");
   await page.getByLabel("Estimated hours").fill("2");
   await page.getByRole("dialog").getByRole("button", { name: "Add assignment", exact: true }).click();
+  await page.getByRole("button", { name: "Preferences", exact: true }).click();
+  await page.getByLabel("Spread study sessions across days").uncheck();
+  await page.getByRole("button", { name: "Save preferences" }).click();
   await page.getByRole("button", { name: "Generate Schedule", exact: true }).click();
   await expect(page.locator(".study-event")).toHaveCount(2);
   await page.route("**/schedule", route => route.abort());
@@ -126,7 +206,7 @@ test("real Python planning, unfinished work, work-shift shortage, and persistenc
         startTime: at(day, start), endTime: at(day, end), timeMinutes: 60, remainingTimeMinutes: 60,
       })),
       preferences: { maxStudyTimeMinutes: 240, maxSessionTimeMinutes: 60,
-        breakDurationMinutes: 15, sleepHours: { wakeUpTime: "07:00", bedtime: "23:00" } },
+        breakDurationMinutes: 15, spreadAssignments: false, sleepHours: { wakeUpTime: "07:00", bedtime: "23:00" } },
       studyBlocks: [], warnings: [],
     };
     localStorage.setItem("schedule-maker:v1", JSON.stringify({

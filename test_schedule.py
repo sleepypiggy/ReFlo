@@ -17,7 +17,7 @@ def request_payload():
                    "estimated_minutes": 240, "remaining_minutes": 240, "grade_weight": 20}],
         "events": [],
         "preferences": {"wake_up_time": "09:00", "bedtime": "12:00", "max_daily_study_minutes": 120,
-                        "max_session_minutes": 60, "break_minutes": 15},
+                        "max_session_minutes": 60, "break_minutes": 15, "spread_assignments": False},
         "locked_blocks": [],
     }
 
