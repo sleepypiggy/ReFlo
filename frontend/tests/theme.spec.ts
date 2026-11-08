@@ -36,7 +36,7 @@ test("theme toggles and persists without changing schedule data", async ({ page 
   await page.screenshot({ path: "test-results/design-dark.png", fullPage: true });
 
   await page.getByRole("button", { name: "Switch to light mode" }).click();
-  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(243, 241, 236)");
   await page.reload();
   await expect(page.getByRole("button", { name: "Switch to dark mode" })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("schedule-maker:v1"))).toBe(workspace);

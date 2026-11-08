@@ -7,19 +7,22 @@ import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
 import "@fullcalendar/react/themes/classic/palette.css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { Event, StudyBlock, Task } from "@/datatypes";
+import type { Event, StudyBlock, Task, Topic } from "@/datatypes";
 import { expandEvents, weekStart } from "@/lib/calendar";
+import { colorPalette } from "@/lib/topics";
 
 export default function WeeklyCalendar({
   events,
   studyBlocks,
   tasks,
+  topics = [],
   onStudyClick,
   onEventClick,
 }: {
   events: Event[];
   studyBlocks: StudyBlock[];
   tasks: Task[];
+  topics?: Topic[];
   onStudyClick: (id: string) => void;
   onEventClick: (id: string) => void;
 }) {
@@ -34,20 +37,30 @@ export default function WeeklyCalendar({
   });
   const calendarEvents = useMemo(
     () => [
-      ...expandEvents(events, range.start, range.end).map((event) => ({
+      ...expandEvents(events, range.start, range.end).map((event) => {
+        const topic = topics.find((topic) => topic.id === event.topicId);
+        const color = topic?.color ?? event.color;
+        const palette = color ? colorPalette(color) : null;
+        return {
         id: `fixed:${event.instanceId}`,
         title: event.name,
         start: event.startTime,
         end: event.endTime,
-        className: "calendar-event fixed-event",
-        color: "var(--lecture-bg)",
-        contrastColor: "var(--lecture-ink)",
-        extendedProps: { type: "fixed", eventId: event.id },
-      })),
-      ...studyBlocks.map((block) => ({
+        className: `calendar-event fixed-event${color ? " topic-study" : ""}`,
+        color: palette?.background ?? "var(--lecture-bg)",
+        contrastColor: palette?.foreground ?? "var(--lecture-ink)",
+        extendedProps: { type: "fixed", eventId: event.id, topicName: topic?.name },
+      };
+      }),
+      ...studyBlocks.map((block) => {
+        const task = tasks.find((task) => task.id === block.taskId);
+        const topic = topics.find((topic) => topic.id === task?.topicId);
+        const color = topic?.color ?? task?.color;
+        const palette = color ? colorPalette(color) : null;
+        return {
         id: `study:${block.id}`,
         title:
-          tasks.find((task) => task.id === block.taskId)?.name ??
+          task?.name ??
           "Study session",
         start: block.startTime,
         end: block.endTime,
@@ -56,13 +69,13 @@ export default function WeeklyCalendar({
             ? "var(--surface-soft)"
             : block.status === "unfinished" || block.status === "skipped"
               ? "var(--unfinished-bg)"
-              : "var(--study-bg)",
+              : palette?.background ?? "var(--study-bg)",
         contrastColor:
           block.status === "completed"
             ? "var(--secondary-ink)"
             : block.status === "unfinished" || block.status === "skipped"
               ? "var(--unfinished-ink)"
-              : "var(--study-ink)",
+              : palette?.foreground ?? "var(--study-ink)",
         className:
           block.status === "completed"
             ? "calendar-event completed-event"
@@ -70,15 +83,17 @@ export default function WeeklyCalendar({
               ? "calendar-event skipped-event"
             : block.status === "unfinished"
               ? "calendar-event unfinished-event"
-              : "calendar-event study-event",
+              : `calendar-event study-event${color ? " topic-study" : ""}`,
         extendedProps: {
           type: "study",
           blockId: block.id,
           status: block.status,
+          topicName: topic?.name,
         },
-      })),
+      };
+      }),
     ],
-    [events, range, studyBlocks, tasks],
+    [events, range, studyBlocks, tasks, topics],
   );
   return (
     <section className="calendar-card" aria-label="Study calendar">
@@ -183,6 +198,7 @@ export default function WeeklyCalendar({
             <div className="calendar-event-content">
               <div className="calendar-event-time">{info.timeText}</div>
               <div className="calendar-event-title">{info.event.title}</div>
+              {info.event.extendedProps.topicName && <div className="calendar-event-topic">{info.event.extendedProps.topicName}</div>}
             </div>
           )}
           eventDidMount={(info) => {

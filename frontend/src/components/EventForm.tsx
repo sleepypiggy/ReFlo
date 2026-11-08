@@ -1,15 +1,20 @@
 import { useState, type FormEvent } from "react";
-import type { Event, Weekday } from "@/datatypes";
+import type { Event, Topic, Weekday } from "@/datatypes";
 import { localInput } from "@/lib/calendar";
+import { initialTopicSelection, resolveTopicSelection } from "@/lib/topics";
+import TopicPicker from "./TopicPicker";
 
 export default function EventForm({
   event: fixed,
+  topics = [],
   onSave,
 }: {
   event?: Event;
-  onSave: (event: Event) => void;
+  topics?: Topic[];
+  onSave: (event: Event, topics: Topic[]) => void;
 }) {
   const [error, setError] = useState("");
+  const [topicSelection, setTopicSelection] = useState(() => initialTopicSelection(topics, fixed?.topicId, fixed?.color));
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -28,6 +33,13 @@ export default function EventForm({
       setError("Recurring commitments must be shorter than 24 hours.");
       return;
     }
+    let selection;
+    try {
+      selection = resolveTopicSelection(topics, topicSelection);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not save topic.");
+      return;
+    }
     onSave({
       id: fixed?.id ?? crypto.randomUUID(),
       calendarImport: fixed?.calendarImport,
@@ -37,7 +49,9 @@ export default function EventForm({
       timeMinutes,
       remainingTimeMinutes: timeMinutes,
       repeatOn,
-    });
+      topicId: selection.topicId,
+      color: selection.color,
+    }, selection.topics);
   }
   return (
     <form className="form-stack" onSubmit={submit}>
@@ -55,6 +69,10 @@ export default function EventForm({
           placeholder="e.g. Intramural volleyball"
         />
       </label>
+      <TopicPicker topics={topics} value={topicSelection} onChange={(value) => {
+        setTopicSelection(value);
+        setError("");
+      }} />
       <label>
         Start datetime
         <input

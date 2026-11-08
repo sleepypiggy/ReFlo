@@ -1,5 +1,6 @@
 import { Task, type AppMode, type Schedule } from "../datatypes";
 import { createDemo, emptySchedule } from "./mockData";
+import { isTopicColor } from "./topics";
 
 export interface Workspace {
   mode: AppMode;
@@ -40,6 +41,13 @@ function revive(value: Schedule): Schedule {
   )
     throw new Error("Invalid saved workspace");
   const preferences = value.preferences;
+  const topics = value.topics ?? [];
+  if (!Array.isArray(topics) || topics.some((topic) =>
+    !topic || typeof topic.id !== "string" || !topic.id ||
+    typeof topic.name !== "string" || !topic.name.trim() || topic.name.length > 80 ||
+    !isTopicColor(topic.color)) || new Set(topics.map((topic) => topic.id)).size !== topics.length) {
+    throw new Error("Invalid saved topics");
+  }
   positive(preferences.maxStudyTimeMinutes);
   positive(preferences.maxSessionTimeMinutes);
   positive(preferences.breakDurationMinutes, true);
@@ -63,6 +71,7 @@ function revive(value: Schedule): Schedule {
     throw new Error("Invalid plan status");
   return {
     ...value,
+    topics,
     needsReplan: value.needsReplan ?? false,
     weekStart: date(value.weekStart),
     tasks: value.tasks.map((task) => {
@@ -74,14 +83,17 @@ function revive(value: Schedule): Schedule {
         !task.name.trim() || !Number.isFinite(task.gradeWeight) || task.gradeWeight < 0 || task.gradeWeight > 100
       )
         throw new Error("Invalid saved assignment");
+      if (task.color !== undefined && !isTopicColor(task.color)) throw new Error("Invalid saved assignment color");
       return new Task({
         ...task,
+        topicId: topics.some((topic) => topic.id === task.topicId) ? task.topicId : undefined,
         deadline: date(task.deadline),
         startTime: task.startTime ? date(task.startTime) : undefined,
         endTime: task.endTime ? date(task.endTime) : undefined,
       });
     }),
     events: value.events.map((event) => {
+      if (event.color !== undefined && !isTopicColor(event.color)) throw new Error("Invalid saved event color");
       const startTime = date(event.startTime), endTime = date(event.endTime);
       if (typeof event.name !== "string" || !event.name.trim() || endTime <= startTime ||
           (event.repeatOn !== undefined && (!Array.isArray(event.repeatOn) || event.repeatOn.some(day => !Number.isInteger(day) || day < 0 || day > 6))))
@@ -96,7 +108,7 @@ function revive(value: Schedule): Schedule {
         new Intl.DateTimeFormat("en", { timeZone: source.timezone });
         if (source.recurrenceId) date(source.recurrenceId as unknown as Date);
       }
-      return { ...event, startTime, endTime };
+      return { ...event, startTime, endTime, topicId: topics.some((topic) => topic.id === event.topicId) ? event.topicId : undefined };
     }),
     studyBlocks: value.studyBlocks.map((block) => {
       if (
