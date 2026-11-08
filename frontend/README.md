@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿# Schedule Maker frontend
 
-## Getting Started
+Next.js dashboard for assignment planning, fixed commitments, and study progress.
 
-First, run the development server:
-
-```bash
+```sh
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. Demo mode works without Python. Switch **Data source**
+to **Real backend** for your own workspace. Each mode persists independently in
+browser localStorage. Preferences are saved per workspace. Browser dates are local.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The calendar supports week/day views, Today, and previous/next navigation. Click
+commitments to edit/delete; click study sessions to complete or report unfinished
+work. Assignment deletion also removes its sessions after a confirmation. Updating
+inputs does not automatically regenerate the plan; use Generate Schedule.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Backend setup and JSON examples: [API_CONTRACT.md](API_CONTRACT.md).
+Validation results and design-check limitations: [VALIDATION.md](VALIDATION.md).
+The existing `/health` endpoint can be checked from the footer. The Python teammate
+must implement `/schedule` before real generation/rescheduling works end to end.
 
-## Learn More
+```sh
+npm run lint
+npx tsc --noEmit
+npm run build
+npm run test:e2e
+```
 
-To learn more about Next.js, take a look at the following resources:
+Browser tests use installed Microsoft Edge by default. Set `PLAYWRIGHT_CHANNEL` to
+another installed channel (e.g. `chrome`), or use `chromium` after installing the
+Playwright browser. Tests start a production server on port 3100 unless one is
+already running there. Run the production build before browser tests.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`src/datatypes.ts` preserves the original Task, Event, Preferences and Schedule
+models. Independent StudyBlocks reference tasks; task start/end metadata is not
+used to place work. `src/lib/apiAdapter.ts` owns snake_case and ISO serialization.
+FullCalendar v7 includes timeGrid and classic theme plugins within its React package.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The existing design skill informed spacing, typography, keyboard access, and visual
+consistency. Dashboard requirements take priority over its marketing hero/animation
+recipes. No authentication, database, drag-and-drop, or frontend scheduler is used.
