@@ -9,7 +9,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from google.genai import types
 
-from backend.app.assistant_api import AssistantSettings, RESULT
+from backend.app.assistant_api import AssistantSettings, MODEL_RESULT
 from backend.app.main import app
 from test_schedule import request_payload
 
@@ -18,6 +18,8 @@ DRAFT = {
     "type": "event_draft", "title": "Work shift",
     "start": "2026-11-10T19:00:00-07:00", "end": "2026-11-10T20:00:00-07:00",
 }
+MODEL_DRAFT = {"type": "event_draft", "title": "Work shift",
+               "start_local": "2026-11-10T19:00:00", "end_local": "2026-11-10T20:00:00"}
 QUESTION = {"type": "clarification", "question": "What time does your shift start and end?"}
 
 
@@ -42,15 +44,15 @@ class AssistantApiTests(unittest.TestCase):
         self.gemini.models.generate_content.return_value = SimpleNamespace(text=json.dumps(value))
 
     def test_discriminator_schema_uses_supported_single_value_enums(self):
-        schema = RESULT.json_schema()
-        for name, tag in (("EventDraft", "event_draft"), ("Clarification", "clarification")):
+        schema = MODEL_RESULT.json_schema()
+        for name, tag in (("LocalEventDraft", "event_draft"), ("Clarification", "clarification")):
             with self.subTest(model=name):
                 discriminator = schema["$defs"][name]["properties"]["type"]
                 self.assertEqual(discriminator.get("enum"), [tag])
                 self.assertNotIn("const", discriminator)
 
     def test_work_shift_draft_and_structured_request(self):
-        self.respond_with(DRAFT)
+        self.respond_with(MODEL_DRAFT)
         original = copy.deepcopy(self.payload)
         response = self.client.post("/assistant/parse", json=self.payload)
         self.assertEqual(response.status_code, 200, response.text)
@@ -64,7 +66,7 @@ class AssistantApiTests(unittest.TestCase):
         self.assertEqual(call["model"], "gemini-3.5-flash-lite")
         self.assertEqual(json.loads(call["contents"]), self.payload)
         self.assertEqual(call["config"]["response_mime_type"], "application/json")
-        self.assertEqual(call["config"]["response_json_schema"], RESULT.json_schema())
+        self.assertEqual(call["config"]["response_json_schema"], MODEL_RESULT.json_schema())
         # Use real SDK types to check our configuration, even with a mocked client.
         types.GenerateContentConfig(**call["config"])
         types.HttpOptions(**self.factory.call_args.kwargs["http_options"])
@@ -79,7 +81,7 @@ class AssistantApiTests(unittest.TestCase):
         self.assertEqual(json.loads(self.gemini.models.generate_content.call_args.kwargs["contents"]), self.payload)
 
     def test_browser_utc_clock_is_localized_before_resolving_tonight(self):
-        self.respond_with(DRAFT)
+        self.respond_with(MODEL_DRAFT)
         for clock, local_clock in (
             ("2026-11-11T01:00:00Z", "2026-11-10T18:00:00-07:00"),
             ("2026-07-11T01:00:00Z", "2026-07-10T18:00:00-07:00"),
@@ -101,6 +103,32 @@ class AssistantApiTests(unittest.TestCase):
         self.assertEqual(schedule.json()["unscheduled"], [])
         self.factory.assert_not_called()
 
+    def test_november_8_tomorrow_evening_uses_vancouver_offset(self):
+        self.respond_with({**MODEL_DRAFT, "start_local": "2026-11-09T19:00:00",
+                           "end_local": "2026-11-09T20:00:00"})
+        payload = {**self.payload, "message": "I have work tomorrow from 7 to 8 PM",
+                   "current_time": "2026-11-08T07:28:00-07:00"}
+        response = self.client.post("/assistant/parse", json=payload)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json(), {
+            "type": "event_draft", "title": "Work shift",
+            "start": "2026-11-09T19:00:00-07:00", "end": "2026-11-09T20:00:00-07:00",
+        })
+        call = self.gemini.models.generate_content.call_args.kwargs
+        self.assertEqual(json.loads(call["contents"]), payload)
+        fields = call["config"]["response_json_schema"]["$defs"]["LocalEventDraft"]["properties"]
+        self.assertIn("start_local", fields)
+        self.assertNotIn("start", fields)
+
+    def test_nonexistent_and_ambiguous_local_times_are_rejected(self):
+        # New York still has both spring gaps and autumn folds.
+        for start, end in (("2026-03-08T02:15:00", "2026-03-08T03:30:00"),
+                           ("2026-11-01T01:15:00", "2026-11-01T02:30:00")):
+            with self.subTest(start=start):
+                self.respond_with({**MODEL_DRAFT, "start_local": start, "end_local": end})
+                response = self.client.post("/assistant/parse", json={**self.payload, "timezone": "America/New_York"})
+                self.assertEqual(response.status_code, 502, response.text)
+
     def test_gemini_unavailable(self):
         self.gemini.models.generate_content.side_effect = RuntimeError("secret provider detail fake-test-key")
         response = self.client.post("/assistant/parse", json=self.payload)
@@ -117,18 +145,16 @@ class AssistantApiTests(unittest.TestCase):
 
     def test_invalid_model_output(self):
         invalid = [
-            {**DRAFT, "start": "2026-11-10T19:00:00"},
-            {**DRAFT, "end": "2026-11-10T20:00:00"},
-            {**DRAFT, "start": "2026-11-10T19:00:00-08:99"},
-            {**DRAFT, "end": DRAFT["start"]},
-            {**DRAFT, "end": "2026-11-10T18:00:00-07:00"},
-            # 20:00Z is earlier than the given 19:00-07:00 start.
-            {**DRAFT, "end": "2026-11-10T20:00:00Z"},
-            {**DRAFT, "start": "2026-02-30T19:00:00-07:00"},
-            {**DRAFT, "title": " "}, {**DRAFT, "calendar_updated": True},
-            {**DRAFT, "type": "event"},
+            {**MODEL_DRAFT, "start_local": "2026-11-10T19:00:00-08:00"},
+            {**MODEL_DRAFT, "end_local": "2026-11-10T20:00:00Z"},
+            {**MODEL_DRAFT, "end_local": MODEL_DRAFT["start_local"]},
+            {**MODEL_DRAFT, "end_local": "2026-11-10T18:00:00"},
+            {**MODEL_DRAFT, "start_local": "2026-02-30T19:00:00"},
+            {**MODEL_DRAFT, "title": " "}, {**MODEL_DRAFT, "calendar_updated": True},
+            {**MODEL_DRAFT, "type": "event"},
             {"type": "clarification", "question": " "},
             {"type": "clarification"}, {"type": "unknown"}, [], None,
+            DRAFT,  # Reject the former model schema: offsets are now Python-owned.
         ]
         for value in invalid:
             with self.subTest(value=value):
