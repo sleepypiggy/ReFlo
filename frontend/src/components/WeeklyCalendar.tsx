@@ -12,6 +12,7 @@ import type { Event, StudyBlock, Task, Topic } from "@/datatypes";
 import { dateLabel, expandEvents, weekStart } from "@/lib/calendar";
 import { colorPalette } from "@/lib/topics";
 import { canMoveStudy, studyMoveReason, type CalendarMove } from "@/lib/calendarMoves";
+import { eventPreviewChanges, type CalendarPlanPreview } from "@/lib/eventPreview";
 
 export default function WeeklyCalendar({
   events,
@@ -23,6 +24,7 @@ export default function WeeklyCalendar({
   onMove,
   busy = false,
   changedBlockIds,
+  preview = null,
 }: {
   events: Event[];
   studyBlocks: StudyBlock[];
@@ -33,15 +35,43 @@ export default function WeeklyCalendar({
   onMove: (move: CalendarMove) => boolean;
   busy?: boolean;
   changedBlockIds?: string[];
+  preview?: CalendarPlanPreview | null;
 }) {
   const ref = useRef<CalendarRef>(null);
+  const [view, setView] = useState("timeGridWeek");
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1200px)");
+    const update = () => setDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const activePreview = desktop ? preview : null;
+  const changes = useMemo(() => activePreview
+    ? eventPreviewChanges(activePreview.base, activePreview.next, activePreview.now) : null, [activePreview]);
+  useEffect(() => {
+    if (!activePreview || !changes) return;
+    const dates = [...changes.removed, ...changes.added,
+      ...activePreview.next.events.filter(event => !activePreview.base.events.some(old => old.id === event.id))]
+      .map(item => item.startTime).sort((a, b) => +a - +b);
+    if (dates[0]) {
+      // Day view gives both placements enough room for readable labels, even
+      // when the original session overlaps the proposed fixed commitment.
+      const frame = requestAnimationFrame(() => {
+        setView("timeGridDay");
+        ref.current?.getApi().changeView("timeGridDay", dates[0]);
+        ref.current?.getApi().scrollToTime({ hours: Math.max(6, dates[0].getHours() - 1) });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [activePreview, changes]);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
   const [title, setTitle] = useState("");
-  const [view, setView] = useState("timeGridWeek");
   const [range, setRange] = useState(() => {
     const start = weekStart();
     const end = new Date(start);
@@ -50,22 +80,26 @@ export default function WeeklyCalendar({
   });
   const calendarEvents = useMemo(
     () => [
-      ...expandEvents(events, range.start, range.end).map((event) => {
+      ...expandEvents([...events, ...(activePreview?.next.events.filter(event =>
+        !activePreview.base.events.some(old => old.id === event.id)) ?? [])], range.start, range.end).map((event) => {
+        const proposed = !!activePreview && !events.some(old => old.id === event.id);
         const topic = topics.find((topic) => topic.id === event.topicId);
         const color = topic?.color ?? event.color;
         const palette = color ? colorPalette(color) : null;
         return {
-        id: `fixed:${event.instanceId}`,
+        id: `${proposed ? "preview-fixed" : "fixed"}:${event.instanceId}`,
         title: event.name,
         start: event.startTime,
         end: event.endTime,
-        className: `calendar-event fixed-event${color ? " topic-study" : ""}`,
+        startEditable: proposed ? false : !busy,
+        className: `calendar-event ${proposed ? "calendar-preview-fixed calendar-preview-proposed" : "fixed-event"}${color ? " topic-study" : ""}`,
         color: palette?.background ?? "var(--lecture-bg)",
         contrastColor: palette?.foreground ?? "var(--lecture-ink)",
-        extendedProps: { type: "fixed", eventId: event.id, occurrenceStart: event.startTime, topicName: topic?.name },
+        extendedProps: { type: proposed ? "preview" : "fixed", eventId: event.id, occurrenceStart: event.startTime, topicName: topic?.name, previewLabel: proposed ? "Proposed" : undefined },
       };
       }),
-      ...studyBlocks.map((block) => {
+      ...studyBlocks.filter(block => !changes?.removed.some(old => old.taskId === block.taskId &&
+        +old.startTime === +block.startTime && +old.endTime === +block.endTime)).map((block) => {
         const task = tasks.find((task) => task.id === block.taskId);
         const topic = topics.find((topic) => topic.id === task?.topicId);
         const color = topic?.color ?? task?.color;
@@ -108,11 +142,22 @@ export default function WeeklyCalendar({
         },
       };
       }),
+      ...([
+        ["Previous", changes?.removed ?? []], ["Proposed", changes?.added ?? []],
+      ] as const).flatMap(([label, blocks]) => blocks.map(block => ({
+        id: `preview:${label}:${block.taskId}:${+block.startTime}:${+block.endTime}`,
+        title: activePreview?.next.tasks.find(task => task.id === block.taskId)?.name ?? "Study session",
+        start: block.startTime, end: block.endTime, startEditable: false,
+        className: `calendar-event calendar-preview-study calendar-preview-${label.toLowerCase()}`,
+        color: "var(--study-bg)", contrastColor: "var(--study-ink)",
+        extendedProps: { type: "preview", previewLabel: label },
+      }))),
     ],
-    [events, range, studyBlocks, tasks, topics, changedBlockIds, now],
+    [events, range, studyBlocks, tasks, topics, changedBlockIds, now, activePreview, changes, busy],
   );
   return (
     <section className="calendar-card" aria-label="Study calendar">
+      {activePreview && <p className="calendar-preview-notice" role="status">Preview only · Previous / Proposed · Use Flo’s Apply or Discard to finish.</p>}
       <div className="calendar-toolbar">
         <div className="calendar-date">
           <h2>{view === "timeGridWeek"
@@ -185,10 +230,11 @@ export default function WeeklyCalendar({
           eventDurationEditable={false}
           eventMinHeight={22}
           slotEventOverlap={false}
-          eventAllow={(_drop, event) => !busy && (event?.extendedProps.type !== "study" ||
+          eventAllow={(_drop, event) => !busy && event?.extendedProps.type !== "preview" && (event?.extendedProps.type !== "study" ||
             studyBlocks.some(block => block.id === event.extendedProps.blockId && canMoveStudy(block)))}
           eventDrop={(info) => {
             const props = info.event.extendedProps;
+            if (props.type === "preview") { info.revert(); return; }
             const startTime = info.event.start;
             if (!startTime || !onMove(props.type === "study"
               ? { type: "study", id: props.blockId, startTime }
@@ -218,6 +264,7 @@ export default function WeeklyCalendar({
             );
           }}
           eventClick={(info) => {
+            if (info.event.extendedProps.type === "preview") return;
             if (info.event.extendedProps.type === "study")
               onStudyClick(info.event.extendedProps.blockId);
             else onEventClick(info.event.extendedProps.eventId);
@@ -229,6 +276,7 @@ export default function WeeklyCalendar({
               info.event.extendedProps.status ?? "Fixed commitment",
               info.event.extendedProps.topicName,
               info.event.extendedProps.changed && "Updated",
+              info.event.extendedProps.previewLabel,
               info.event.extendedProps.moveReason,
             ].filter(Boolean).join(" · ");
             return (
@@ -240,7 +288,7 @@ export default function WeeklyCalendar({
                   ? `${info.event.title} — ${info.event.extendedProps.moveReason}` : info.event.title);
               }}>
               <div className="calendar-event-time">{info.timeText}</div>
-              <div className="calendar-event-title">{info.event.extendedProps.moveReason && <LockKeyhole className="session-lock-icon" size={12} aria-hidden="true" />}{info.event.extendedProps.changed && <Sparkles className="calendar-update-icon" size={12} aria-hidden="true" />}{info.event.title}</div>
+              <div className="calendar-event-title">{info.event.extendedProps.previewLabel && <span>{info.event.extendedProps.previewLabel} · </span>}{info.event.extendedProps.moveReason && <LockKeyhole className="session-lock-icon" size={12} aria-hidden="true" />}{info.event.extendedProps.changed && <Sparkles className="calendar-update-icon" size={12} aria-hidden="true" />}{info.event.title}</div>
               {info.event.extendedProps.moveReason && <span className="move-reason-text">{info.event.extendedProps.moveReason}</span>}
               {info.event.extendedProps.topicName && <div className="calendar-event-topic">{info.event.extendedProps.topicName}</div>}
               {info.event.extendedProps.changed && <div className="calendar-change-label">Updated</div>}
@@ -248,6 +296,12 @@ export default function WeeklyCalendar({
           ); }}
           eventDidMount={(info) => {
             info.el.setAttribute("tabindex", "0");
+            if (info.event.extendedProps.type === "preview") {
+              info.el.setAttribute("role", "note");
+              info.el.setAttribute("data-preview-start", info.event.start?.toISOString() ?? "");
+              info.el.setAttribute("data-preview-end", info.event.end?.toISOString() ?? "");
+              return;
+            }
             info.el.setAttribute("title", info.event.extendedProps.moveReason
               ? `${info.event.title} — ${info.event.extendedProps.moveReason}` : info.event.title);
             info.el.setAttribute("role", "button");

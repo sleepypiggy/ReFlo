@@ -1,6 +1,8 @@
 import type { Schedule, StudyBlock } from "../datatypes";
 import { isPreserved } from "./calendar";
 
+export interface CalendarPlanPreview { base: Schedule; next: Schedule; now: Date }
+
 /** Compare placements, never generated IDs or presumed one-to-one moves. */
 export function eventPreviewChanges(before: Schedule, after: Schedule, now: Date) {
   const future = (plan: Schedule) => plan.studyBlocks

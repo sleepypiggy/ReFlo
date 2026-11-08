@@ -5,7 +5,7 @@ import { candidateFromDraft, completeDraft, draftItemId, restoreChat,
   type AssistantDraft, type ChatMessage, type ChatState } from "@/lib/assistantChat";
 import { hours } from "@/lib/calendar";
 import TimeShortagePanel from "./TimeShortagePanel";
-import { eventPreviewChanges } from "@/lib/eventPreview";
+import { eventPreviewChanges, type CalendarPlanPreview } from "@/lib/eventPreview";
 import { studyAdvice } from "@/lib/studyAdvice";
 
 const KEY = "schedule-maker-chat:backend:v1";
@@ -18,10 +18,11 @@ const finish = (messages: ChatMessage[], text: string): ChatMessage[] => {
   return messages.length < 40 ? [...messages, message] : [...messages.slice(0, -1), message];
 };
 
-export default function AssistantPanel({ schedule, onApply, onBusy }: {
+export default function AssistantPanel({ schedule, onApply, onBusy, onPreviewChange }: {
   schedule: Schedule;
   onApply: (next: Schedule) => void;
   onBusy: (busy: boolean) => void;
+  onPreviewChange?: (preview: CalendarPlanPreview | null) => void;
 }) {
   const [chat, setChat] = useState<ChatState>(empty);
   const [loaded, setLoaded] = useState(false);
@@ -37,6 +38,8 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
   const applied = useRef(new Set<string>());
   const transcript = useRef<HTMLDivElement>(null);
   const currentPreview = preview?.base === schedule ? preview : null;
+  useEffect(() => { onPreviewChange?.(currentPreview); }, [currentPreview, onPreviewChange]);
+  useEffect(() => () => onPreviewChange?.(null), [onPreviewChange]);
   const changes = currentPreview
     ? eventPreviewChanges(currentPreview.base, currentPreview.next, currentPreview.now)
     : null;

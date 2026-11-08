@@ -33,6 +33,7 @@ import WeeklyCalendar from "./WeeklyCalendar";
 import TimeShortagePanel from "./TimeShortagePanel";
 import ThemeToggle from "./ThemeToggle";
 import AssistantPanel from "./AssistantPanel";
+import type { CalendarPlanPreview } from "@/lib/eventPreview";
 import CalendarFiles from "./CalendarFiles";
 import PlanReview from "./PlanReview";
 
@@ -51,6 +52,7 @@ export default function Dashboard() {
     "calendar",
   );
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [calendarPreview, setCalendarPreview] = useState<CalendarPlanPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const [healthBusy, setHealthBusy] = useState(false);
   const [health, setHealth] = useState("Not checked");
@@ -431,6 +433,7 @@ export default function Dashboard() {
                 >
                   {section === "calendar" ? (
                     <WeeklyCalendar
+                      preview={mode === "backend" && calendarPreview?.base === schedule ? calendarPreview : null}
                       changedBlockIds={review?.mode === mode ? planChangeDetails(review.before, review.after, review.at).flatMap(change => change.after ? [change.after.id] : []) : undefined}
                       busy={busy}
                       onMove={move}
@@ -467,6 +470,7 @@ export default function Dashboard() {
                 {mode === "backend" && (
                   <aside id="schedule-assistant" className="assistant-column" data-open={assistantOpen}>
                     <AssistantPanel
+                      onPreviewChange={setCalendarPreview}
                       key={mode}
                       schedule={schedule}
                       onBusy={setBusy}

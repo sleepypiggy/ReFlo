@@ -14,7 +14,7 @@ test("a failed automatic event replan saves the event and study history, then re
     const schedule = {
       weekStart: "2026-11-09T00:00:00Z", source: "backend",
       tasks: [{ id: "essay", name: "Essay", estimatedTimeMinutes: 60, remainingTimeMinutes: 60,
-        deadline: "2026-11-10T12:00:00Z", gradeWeight: 20 }], events: [], warnings: [],
+        deadline: "2026-11-10T12:00:00.000Z", gradeWeight: 20 }], events: [], warnings: [],
       preferences: { maxStudyTimeMinutes: 240, maxSessionTimeMinutes: 60, breakDurationMinutes: 0,
         spreadAssignments: false, sleepHours: { wakeUpTime: "09:00", bedtime: "12:00" } },
       studyBlocks: [

@@ -180,7 +180,7 @@ test.describe("fixed event impact preview", () => {
         .toContainText("Statistics: 15 minutes scheduled; 15 minutes unscheduled before the deadline.");
       expect(await savedPlan(page)).toEqual(before);
       await expect(page.locator(".fixed-event")).toHaveCount(0);
-      await expect(page.locator(".study-event")).toHaveCount(1);
+      await expect(page.locator(".calendar-preview-study")).toHaveCount(2);
       return preview;
     };
     let preview = await prepare();

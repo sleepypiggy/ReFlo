@@ -496,6 +496,9 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
 .schedule-workspace > * { min-width: 0; }
 .assistant-column { position: sticky; top: 96px; max-height: calc(100dvh - 112px); overflow-y: auto; }
 .assistant-column .assistant-panel { margin-bottom: 0; }
+.study-calendar .calendar-preview-previous { border: 2px dashed var(--secondary-ink); background: var(--surface-soft); color: var(--ink); cursor: default; }
+.study-calendar .calendar-preview-proposed { border: 2px solid var(--accent-gold); cursor: default; }
+.calendar-preview-notice { margin: 0 0 12px; color: var(--secondary-ink); font-size: 14px; }
 .assistant-toggle { display: none; }
 .assistant-panel [aria-label="Study advice"] summary { cursor: pointer; color: var(--secondary-ink); }
 .assistant-panel [aria-label="Study advice"] ul { margin: 4px 0 0; padding-left: 18px; }
