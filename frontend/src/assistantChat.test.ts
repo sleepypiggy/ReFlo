@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Task } from "./datatypes";
 import { emptySchedule } from "./lib/mockData";
+import { eventPreviewChanges } from "./lib/eventPreview";
 import { candidateFromDraft, completeDraft, draftItemId, restoreChat, validateChatResponse,
   validChatDate, type AssistantDraft } from "./lib/assistantChat";
 
@@ -86,6 +87,39 @@ describe("assistant preview candidates", () => {
     const base = emptySchedule();
     base.tasks = Array.from({ length: 200 }, (_, i) => new Task({ id: String(i), name: "Essay", estimatedTimeMinutes: 60, gradeWeight: 20, deadline: new Date("2026-11-12T00:00:00Z") }));
     assert.throws(() => candidateFromDraft(base, draft(), now), /maximum 200/);
+  });
+  it("feeds assignment chat candidates into the shared Goal 2 impact preview", () => {
+    const before = emptySchedule();
+    const candidate = candidateFromDraft(before, draft(), now);
+    const after = { ...candidate.schedule, studyBlocks: [{ id: "new-slot", taskId: candidate.item.id,
+      startTime: new Date("2026-11-09T10:00:00Z"), endTime: new Date("2026-11-09T11:00:00Z"), status: "planned" as const }],
+      warnings: [{ taskId: candidate.item.id, unscheduledMinutes: 60, reason: "Shortage" }] };
+    const changes = eventPreviewChanges(before, after, now);
+    assert.equal(changes.removed.length, 0);
+    assert.equal(changes.added.length, 1);
+    assert.deepEqual(changes.assignments, [{ taskId: candidate.item.id, scheduledMinutes: 60, unscheduledMinutes: 60 }]);
+    assert.equal(after.tasks.find(task => task.id === changes.assignments[0].taskId)?.name, "Integration worksheet");
+    assert.equal(before.tasks.length, 0);
+  });
+  it("keeps the fixed event time and exposes a displaced study session and shortage", () => {
+    const before = emptySchedule();
+    before.tasks = [new Task({ id: "stats", name: "Statistics", estimatedTimeMinutes: 30,
+      gradeWeight: 20, deadline: new Date("2026-11-10T20:15:00Z") })];
+    before.studyBlocks = [{ id: "old", taskId: "stats", startTime: new Date("2026-11-10T19:30:00Z"),
+      endTime: new Date("2026-11-10T20:00:00Z"), status: "planned" }];
+    const candidate = candidateFromDraft(before, draft({ kind: "event", title: "Work shift",
+      start: "2026-11-10T19:00:00Z", end: "2026-11-10T20:00:00Z" }), now);
+    const after = { ...candidate.schedule, studyBlocks: [{ id: "replacement", taskId: "stats",
+      startTime: new Date("2026-11-10T20:00:00Z"), endTime: new Date("2026-11-10T20:15:00Z"), status: "planned" as const }],
+      warnings: [{ taskId: "stats", unscheduledMinutes: 15, reason: "Shortage" }] };
+    const changes = eventPreviewChanges(before, after, now);
+    assert.deepEqual(changes.removed, before.studyBlocks);
+    assert.deepEqual(changes.added, after.studyBlocks);
+    assert.equal(changes.assignments[0].unscheduledMinutes, 15);
+    assert.equal(after.events[0].startTime.toISOString(), "2026-11-10T19:00:00.000Z");
+    assert.equal(after.events[0].endTime.toISOString(), "2026-11-10T20:00:00.000Z");
+    assert.equal(before.events.length, 0);
+    assert.equal(before.studyBlocks[0].id, "old");
   });
 });
 

@@ -3,11 +3,11 @@
 Current integrated application checks:
 
 - Python API, availability and dashboard scheduling: **93 tests passed**.
-- Frontend calendar, task, topic, plan-accounting and backup validation: **65 tests passed**.
+- Frontend calendar, task, topic, plan-accounting and backup validation: **70 tests passed**.
 - `npm run lint` and `npx tsc --noEmit`: passed.
 - `npm run build`: passed; production page prerendered successfully.
 - `npm run test:e2e`: **19 passed** in Microsoft Edge against the production build.
-- `npm run test:live`: **6 passed** using separate browser and real FastAPI servers.
+- `npm run test:live`: **7 passed** using separate browser and real FastAPI servers.
 - Git whitespace validation and workflow YAML parsing: passed.
 - GitHub-hosted workflow execution is pending its first push; local equivalents pass.
 
@@ -92,3 +92,40 @@ onto a future manually placed study session releases only the conflicting pin
 and replans automatically. Other pins and locked history remain intact. A browser
 regression verifies the outgoing reservations, fixed event time and revised study
 block; existing recurring occurrence movement and manual study placement tests pass.
+
+Schedule-change review shows previous/new slots, additions, removals and remaining
+shortages after real generation or assistant Apply. Calendar outlines and Updated
+labels mark changed blocks; dismissing clears highlights without removing undo.
+A browser regression checks mobile width, visual review, dismissal, and undo while
+retaining the saved event, task values and historical entries. Unit tests cover
+split blocks, regenerated IDs and separation between assignments.
+
+Integrated assistant impact previews share slot comparisons with the applied
+change review. Preview shows separate removed/added slots and affected assignment
+minutes without saving; Apply clears the stale-plan flag and then shows the
+review and calendar highlights. Live coverage includes a partial fit (15 minutes
+scheduled and 15 unscheduled), discard without changes, Apply and persistence.
+Next.js route type generation was also verified before the TypeScript check,
+matching the updated CI workflow.
+
+## Goal 1 + Goal 2 branch integration (2026-11-08)
+
+Synced the conversational assignment/event draft work with `main` at `30a3511`.
+The resolved assistant panel retains persistent chat, missing-field questions,
+validated drafts, stale/duplicate protections, and Goal 2's separate removed/added
+study slots and affected-assignment totals. Both creation kinds use the shared
+impact preview; new assignment names resolve against the candidate plan. Undoing
+an assistant replan retains newly created assignments as well as fixed events.
+
+Verified locally after resolving the merge:
+
+- 83 frontend unit tests; lint; generated Next.js types; TypeScript check.
+- 110 Python tests and all three `demo_week.py` scheduling scenarios.
+- Production build using the ignored `.next-live-tests` output directory.
+- 20 browser regression cases against that production build in Chrome.
+- 7 live-backend browser cases, including fixed-event displacement/partial fit,
+  preview-only changes before Apply, discard, persistence, and plan review.
+
+The chat browser cases stub assistant responses. Backend chat tests mock Gemini
+extraction while exercising the real route and scheduler. Live Gemini model
+responses have not been verified. No credentials were used by these tests.

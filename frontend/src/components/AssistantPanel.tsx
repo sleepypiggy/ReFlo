@@ -5,6 +5,7 @@ import { candidateFromDraft, completeDraft, draftItemId, restoreChat,
   type AssistantDraft, type ChatMessage, type ChatState } from "@/lib/assistantChat";
 import { hours } from "@/lib/calendar";
 import TimeShortagePanel from "./TimeShortagePanel";
+import { eventPreviewChanges } from "@/lib/eventPreview";
 
 const KEY = "schedule-maker-chat:backend:v1";
 const empty = (): ChatState => ({ messages: [], draft: null, ready: false });
@@ -28,11 +29,14 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
   const [storageNotice, setStorageNotice] = useState("");
   const [pending, setPending] = useState(false);
   const [retry, setRetry] = useState<ChatMessage[] | null>(null);
-  const [preview, setPreview] = useState<{ base: Schedule; next: Schedule; draft: AssistantDraft } | null>(null);
+  const [preview, setPreview] = useState<{ base: Schedule; next: Schedule; draft: AssistantDraft; now: Date } | null>(null);
   const working = useRef(false);
   const applied = useRef(new Set<string>());
   const transcript = useRef<HTMLDivElement>(null);
   const currentPreview = preview?.base === schedule ? preview : null;
+  const changes = currentPreview
+    ? eventPreviewChanges(currentPreview.base, currentPreview.next, currentPreview.now)
+    : null;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -66,7 +70,7 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
     if (applied.current.has(draft.id)) throw new Error("This draft has already been applied. Start a new request.");
     const candidate = candidateFromDraft(base, draft, now);
     const revised = await generateSchedule(candidate.schedule, now);
-    setPreview({ base, next: { ...candidate.schedule, ...revised, source: "backend", needsReplan: false }, draft });
+    setPreview({ base, next: { ...candidate.schedule, ...revised, source: "backend", needsReplan: false }, draft, now });
   }
   async function send(messages: ChatMessage[]) {
     if (working.current) return;
@@ -168,7 +172,7 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
       </form>
       {error && <p className="error-banner" role="alert">{error}</p>}
       {preview && !currentPreview && <p className="muted small" role="status">Your schedule changed. Generate a new preview before applying this draft.</p>}
-      {currentPreview && (
+      {currentPreview && changes && (
         <section className="assistant-preview form-stack" aria-label="Revised schedule preview">
           <h3>Revised schedule preview</h3>
           <p><strong>{currentPreview.draft.title}</strong><br />
@@ -176,15 +180,34 @@ export default function AssistantPanel({ schedule, onApply, onBusy }: {
               ? `Due ${when(new Date(currentPreview.draft.deadline!))} · ${hours(currentPreview.draft.estimated_minutes!)} estimated · ${currentPreview.draft.grade_weight}% of grade`
               : `${when(new Date(currentPreview.draft.start!))} – ${when(new Date(currentPreview.draft.end!))}`}</p>
           <p className="muted">Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}. Fixed commitments and study history are preserved. Your calendar has not changed.</p>
-          <h4>Revised study sessions</h4>
-          {currentPreview.next.studyBlocks.length ? <ul className="assistant-sessions">
-            {[...currentPreview.next.studyBlocks].sort((a, b) => +a.startTime - +b.startTime).map((block) => (
-              <li key={block.id}>
-                <strong>{currentPreview.next.tasks.find((task) => task.id === block.taskId)?.name}</strong>
-                <span>{when(block.startTime)} – {when(block.endTime)} ({block.status})</span>
-              </li>
-            ))}
-          </ul> : <p>No study sessions in the revised plan.</p>}
+          <p>Removed and added slots are shown separately; a session may be shortened or split.</p>
+          {([
+            ["Removed study slots", changes.removed],
+            ["Added study slots", changes.added],
+          ] as const).map(([label, blocks]) => (
+            <section key={label} aria-label={label}>
+              <h4>{label}</h4>
+              {blocks.length ? <ul className="assistant-sessions">
+                {blocks.map(block => (
+                  <li key={JSON.stringify([block.taskId, +block.startTime, +block.endTime])}>
+                    <strong>{currentPreview.next.tasks.find(task => task.id === block.taskId)?.name}</strong>
+                    <span>{when(block.startTime)} – {when(block.endTime)}</span>
+                  </li>
+                ))}
+              </ul> : <p>None.</p>}
+            </section>
+          ))}
+          <section aria-label="Affected assignment totals">
+            <h4>Affected assignments</h4>
+            {changes.assignments.length ? <ul>
+              {changes.assignments.map(item => (
+                <li key={item.taskId}>
+                  <strong>{currentPreview.next.tasks.find(task => task.id === item.taskId)?.name}</strong>
+                  {": "}{item.scheduledMinutes} minutes scheduled; {item.unscheduledMinutes} minutes unscheduled before the deadline.
+                </li>
+              ))}
+            </ul> : <p>No future study slots or unscheduled minutes changed.</p>}
+          </section>
           {currentPreview.next.warnings.length > 0 && <TimeShortagePanel schedule={currentPreview.next} demo={false} />}
           <div className="assistant-actions">
             <button className="button primary" disabled={pending} onClick={applyPreview}>Apply</button>

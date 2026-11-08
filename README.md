@@ -63,6 +63,18 @@ future study automatically regenerates the plan. Event times stay fixed; study
 sessions move around them. Past, started and locked entries are preserved. If
 replanning fails, the event remains saved and Generate Schedule retries the plan.
 
+After a real replan, **What changed** compares previous and new study times,
+lists added or removed sessions, and shows unscheduled minutes. Changed sessions
+are outlined and labeled **Updated** on the calendar. Dismiss the review to clear
+highlights, or use **Undo last replan** to restore the previous study calendar
+while retaining saved commitments and task progress. Reviews last for the current
+visit and clear when you edit the plan or refresh.
+
+Assistant previews also show removed and added study slots and each affected
+assignment's scheduled and unscheduled minutes before you choose **Apply**.
+Discarding a preview leaves the saved plan unchanged. After Apply, the regular
+change-review panel and calendar highlights show the applied changes.
+
 ## API Integration
 
 The optional Gemini `POST /assistant/chat` endpoint powers a conversational

@@ -177,6 +177,34 @@ class AssistantChatTests(unittest.TestCase):
         types.HttpOptions(**self.factory.call_args.kwargs["http_options"])
         self.assertIn("Never invent", call["config"]["system_instruction"])
 
+    def test_fixed_event_chat_draft_replans_conflicting_work_through_real_scheduler(self):
+        self.payload.update(current_time="2026-11-10T19:00:00Z", timezone="UTC")
+        self.payload["messages"][0]["content"] = "Work on Tuesday from 7pm to 8pm"
+        result = self.reply([update("title", "Work", "Work"),
+            update("start", "2026-11-10T19:00:00Z", "7pm"),
+            update("end", "2026-11-10T20:00:00Z", "8pm")], "create_event")
+        self.assertEqual(result["status"], "ready")
+        draft = result["draft"]
+        candidate = {
+            "contract_version": 1, "current_time": self.payload["current_time"], "timezone": "UTC",
+            "tasks": [{"id": "stats", "title": "Statistics", "deadline": "2026-11-10T20:15:00Z",
+                       "estimated_minutes": 30, "remaining_minutes": 30, "grade_weight": 20}],
+            "events": [{"id": f"assistant-{draft['id']}", "title": draft["title"],
+                        "start": draft["start"], "end": draft["end"], "repeat_on": []}],
+            "preferences": {"wake_up_time": "19:00", "bedtime": "22:00", "max_daily_study_minutes": 120,
+                            "max_session_minutes": 60, "break_minutes": 15, "spread_assignments": False},
+            "locked_blocks": [],
+        }
+        original = copy.deepcopy(candidate)
+        response = self.client.post("/schedule", json=candidate)
+        self.assertEqual(response.status_code, 200, response.text)
+        plan = response.json()
+        self.assertEqual(len(plan["study_blocks"]), 1)
+        self.assertEqual(plan["study_blocks"][0]["start"], "2026-11-10T20:00:00Z")
+        self.assertEqual(plan["study_blocks"][0]["end"], "2026-11-10T20:15:00Z")
+        self.assertEqual(plan["unscheduled"][0]["minutes"], 15)
+        self.assertEqual(candidate, original)
+
     def test_invalid_output_and_unsupported_actions_fail_closed(self):
         for output in ["not json", json.dumps({"intent": "delete_assignment", "updates": [], "question": None}),
                        json.dumps({"intent": "create_assignment", "updates": [{"field": "delete", "value": "all", "source_message": 0, "evidence": "Add"}], "question": None})]:

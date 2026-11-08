@@ -134,3 +134,14 @@ frontend validation, candidate construction, duplicate detection, and persistenc
 Browser cases in `assistant.spec.ts` cover the complete UI lifecycle with mocked
 network responses. Live Gemini responses require a configured key and have not
 been exercised as part of these automated tests.
+
+### Combined impact preview
+
+Both assignment and event chat drafts now use the same slot comparison as fixed
+event previews. The preview lists **Removed study slots**, **Added study slots**,
+and **Affected assignments**, with scheduled and unscheduled minutes. It does not
+assume one removed slot maps to one added slot: sessions may split or shorten.
+The comparison uses the preview's captured time, and newly created assignment
+names come from the candidate plan. Apply remains explicit and invalidates after
+intervening edits. Undo of an applied replan keeps the newly saved assignment or
+fixed commitment while restoring the previous study calendar for regeneration.

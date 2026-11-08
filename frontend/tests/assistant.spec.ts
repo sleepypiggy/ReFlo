@@ -4,7 +4,11 @@ const id = "d0918ca3-2325-44c8-b32f-ec2badf6fbe6";
 const assignment = { id, started_at: 0, kind: "assignment", title: "Math worksheet", deadline: "2026-11-10T17:00:00Z",
   estimated_minutes: 120, grade_weight: 15, start: null, end: null, sources: {} };
 const ready = (draft: unknown = assignment) => ({ status: "ready", message: "Your draft is complete. Review the proposed schedule.", draft, missing_fields: [] });
-const saved = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend);
+const saved = (page: Page) => page.evaluate(() => {
+  const plan = JSON.parse(localStorage.getItem("schedule-maker:v1")!).backend;
+  // Old workspaces gain an empty topic collection when storage is revived.
+  return { ...plan, topics: plan.topics ?? [] };
+});
 async function start(page: Page) {
   await page.clock.setFixedTime(new Date("2026-11-04T08:00:00Z"));
   await page.goto("/");
@@ -64,6 +68,8 @@ test("asks for weight, restores its pending draft, previews shortages and applie
   await expect(preview).toContainText("Math worksheet");
   await expect(preview).toContainText("15% of grade");
   await expect(preview).toContainText("1 alert");
+  await expect(preview.getByRole("region", { name: "Added study slots" })).toContainText("Math worksheet");
+  await expect(preview.getByRole("region", { name: "Affected assignment totals" })).toContainText("60 minutes scheduled; 60 minutes unscheduled");
   expect(await saved(page)).toEqual(before);
   await page.setViewportSize({ width: 320, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -71,6 +77,10 @@ test("asks for weight, restores its pending draft, previews shortages and applie
   await expect(preview).toHaveCount(0);
   await expect(page.locator(".study-event")).toHaveCount(1);
   expect((await saved(page)).tasks).toHaveLength(1);
+  await page.getByRole("button", { name: "Undo last replan" }).click();
+  expect((await saved(page)).tasks).toHaveLength(1);
+  expect((await saved(page)).tasks[0].name).toBe("Math worksheet");
+  await expect(page.locator(".study-event")).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("log")).toContainText("Assignment added");
   await expect(pending).toHaveCount(0);

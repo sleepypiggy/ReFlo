@@ -21,7 +21,7 @@ import { checkHealth, generateSchedule } from "@/lib/api";
 import { duration, hours } from "@/lib/calendar";
 import { demoResult } from "@/lib/mockData";
 import { loadWorkspace, saveWorkspace, exportBackup, importBackup, type Workspace } from "@/lib/storage";
-import { hasStudyConflict, planChanges, releaseConflictingPlacements, upcomingMinutes } from "@/lib/plan";
+import { hasStudyConflict, planChangeDetails, planChanges, releaseConflictingPlacements, upcomingMinutes } from "@/lib/plan";
 import { moveCalendarItem, type CalendarMove } from "@/lib/calendarMoves";
 import AssignmentForm from "./AssignmentForm";
 import AssignmentList from "./AssignmentList";
@@ -34,6 +34,7 @@ import TimeShortagePanel from "./TimeShortagePanel";
 import ThemeToggle from "./ThemeToggle";
 import AssistantPanel from "./AssistantPanel";
 import CalendarFiles from "./CalendarFiles";
+import PlanReview from "./PlanReview";
 
 type Dialog =
   | { type: "assignment"; task?: Task }
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [undo, setUndo] = useState<{ mode: AppMode; schedule: Schedule } | null>(null);
+  const [review, setReview] = useState<{ mode: AppMode; before: Schedule; after: Schedule; at: Date } | null>(null);
   const [restore, setRestore] = useState<Workspace | null>(null);
   const [, refreshClock] = useState(0);
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function Dashboard() {
   const mode = workspace.mode,
     schedule = workspace[mode];
   const apply = (next: Schedule) => {
+    setReview(null);
     setPersist(true);
     setWorkspace((current) =>
       current ? { ...current, [mode]: next } : current,
@@ -149,6 +152,7 @@ export default function Dashboard() {
       const missing = result.warnings.reduce((sum, warning) => sum + warning.unscheduledMinutes, 0);
       apply(updated);
       setUndo({ mode, schedule: next });
+      if (mode === "backend") setReview({ mode, before: next, after: updated, at: now });
       setNotice(
         mode === "demo"
           ? "Mock timetable refreshed. Demo replays authored sessions; it does not schedule new work."
@@ -223,6 +227,7 @@ export default function Dashboard() {
     await scheduleWork(next);
   }
   function switchMode(next: AppMode) {
+    setReview(null);
     setWorkspace({ ...workspace!, mode: next });
     setPersist(true);
     setNotice("");
@@ -401,13 +406,17 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
+              {review?.mode === mode && <PlanReview {...review} onDismiss={() => setReview(null)} />}
               {mode === "backend" && (
                 <AssistantPanel
                   key={mode}
                   schedule={schedule}
                   onBusy={setBusy}
                   onApply={(next) => {
+                    const at = new Date();
                     apply(next);
+                    setUndo({ mode, schedule: { ...schedule, tasks: next.tasks, events: next.events, topics: next.topics } });
+                    setReview({ mode, before: schedule, after: next, at });
                     setError("");
                     setNotice("Changes applied and study schedule updated.");
                   }}
@@ -426,6 +435,7 @@ export default function Dashboard() {
               >
                 {section === "calendar" ? (
                   <WeeklyCalendar
+                    changedBlockIds={review?.mode === mode ? planChangeDetails(review.before, review.after, review.at).flatMap(change => change.after ? [change.after.id] : []) : undefined}
                     busy={busy}
                     onMove={move}
                     events={schedule.events}
@@ -695,6 +705,7 @@ export default function Dashboard() {
             try {
               saveWorkspace(restore);
               setWorkspace(restore);
+              setReview(null);
               setPersist(true);
               setRestore(null);
               setDialog(null);
