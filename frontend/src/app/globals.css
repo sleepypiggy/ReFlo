@@ -1128,6 +1128,22 @@ h1 {
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+.calendar-dayGridMonth .calendar-event-content {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  padding: 2px 4px;
+}
+.calendar-dayGridMonth .calendar-event-time {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+.calendar-dayGridMonth .calendar-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .study-calendar .calendar-time-label {
   font-size: 10px;
   color: #626e80;

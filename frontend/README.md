@@ -11,7 +11,7 @@ Open http://localhost:3000. Demo mode works without Python. Switch **Data source
 to **Real backend** for your own workspace. Each mode persists independently in
 browser localStorage. Preferences are saved per workspace. Browser dates are local.
 
-The calendar supports week/day views, Today, and previous/next navigation. Click
+The calendar supports month/week/day views, Today, and previous/next navigation. Click
 commitments to edit/delete; click study sessions to complete or report unfinished
 work. Assignment deletion also removes its sessions after a confirmation. Updating
 inputs does not automatically regenerate the plan; use Generate Schedule.

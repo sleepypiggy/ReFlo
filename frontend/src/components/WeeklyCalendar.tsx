@@ -1,6 +1,7 @@
 ﻿import { useMemo, useRef, useState } from "react";
 import FullCalendar, { type CalendarRef } from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
+import dayGridPlugin from "@fullcalendar/react/daygrid";
 import classicThemePlugin from "@fullcalendar/react/themes/classic";
 import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
@@ -109,6 +110,7 @@ export default function WeeklyCalendar({
           {[
             ["timeGridWeek", "Week"],
             ["timeGridDay", "Day"],
+            ["dayGridMonth", "Month"],
           ].map(([id, label]) => (
             <button
               key={id}
@@ -128,7 +130,7 @@ export default function WeeklyCalendar({
         <FullCalendar
           className={`study-calendar calendar-${view}`}
           ref={ref}
-          plugins={[timeGridPlugin, classicThemePlugin]}
+          plugins={[timeGridPlugin, dayGridPlugin, classicThemePlugin]}
           initialView="timeGridWeek"
           firstDay={1}
           headerToolbar={false}
@@ -146,7 +148,8 @@ export default function WeeklyCalendar({
           eventStartEditable={false}
           eventDurationEditable={false}
           events={calendarEvents}
-          dayHeaderFormat={{ weekday: "short", day: "numeric" }}
+          dayMaxEvents={3}
+          dayHeaderFormat={view === "dayGridMonth" ? { weekday: "short" } : { weekday: "short", day: "numeric" }}
           slotHeaderFormat={{
             hour: "numeric",
             minute: "2-digit",

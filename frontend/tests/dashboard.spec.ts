@@ -257,8 +257,25 @@ test("backend generation serializes data, preserves blocks on errors, and locks 
   await expect(page.locator(".completed-event")).toHaveCount(1);
 });
 
-test("week/day navigation and responsive layout", async ({ page }) => {
+test("month/week/day navigation and responsive layout", async ({ page }) => {
   await start(page);
+  await page.getByRole("button", { name: "Month", exact: true }).click();
+  await expect(page.locator(".calendar-dayGridMonth")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Month", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.screenshot({ path: "test-results/month-view.png", fullPage: true });
+  await page.locator(".calendar-dayGridMonth .study-event").filter({ hasText: "MATH" }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  const monthTitle = await page.locator(".calendar-date h2").innerText();
+  await page.getByRole("button", { name: "Next period" }).click();
+  await expect(page.locator(".calendar-date h2")).not.toHaveText(monthTitle);
+  await page.getByRole("button", { name: "Previous period" }).click();
+  await expect(page.locator(".calendar-date h2")).toHaveText(monthTitle);
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Day", exact: true }).click();
   await expect(page.locator(".calendar-timeGridDay")).toBeVisible();
   await page.getByRole("button", { name: "Next period" }).click();
