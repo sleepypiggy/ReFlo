@@ -1,5 +1,6 @@
 import { Task, type AppMode, type Schedule } from "@/datatypes";
 import { createDemo, emptySchedule } from "./mockData";
+import { isTopicColor } from "./topics";
 
 export interface Workspace {
   mode: AppMode;
@@ -37,6 +38,13 @@ function revive(value: Schedule): Schedule {
   )
     throw new Error("Invalid saved workspace");
   const preferences = value.preferences;
+  const topics = value.topics ?? [];
+  if (!Array.isArray(topics) || topics.some((topic) =>
+    !topic || typeof topic.id !== "string" || !topic.id ||
+    typeof topic.name !== "string" || !topic.name.trim() || topic.name.length > 80 ||
+    !isTopicColor(topic.color)) || new Set(topics.map((topic) => topic.id)).size !== topics.length) {
+    throw new Error("Invalid saved topics");
+  }
   positive(preferences.maxStudyTimeMinutes);
   positive(preferences.maxSessionTimeMinutes);
   positive(preferences.breakDurationMinutes, true);
@@ -45,6 +53,7 @@ function revive(value: Schedule): Schedule {
       throw new Error("Invalid saved sleep time");
   return {
     ...value,
+    topics,
     weekStart: date(value.weekStart),
     tasks: value.tasks.map((task) => {
       positive(task.estimatedTimeMinutes);
@@ -55,18 +64,24 @@ function revive(value: Schedule): Schedule {
         !Number.isFinite(task.gradeWeight)
       )
         throw new Error("Invalid saved assignment");
+      if (task.color !== undefined && !isTopicColor(task.color)) throw new Error("Invalid saved assignment color");
       return new Task({
         ...task,
+        topicId: topics.some((topic) => topic.id === task.topicId) ? task.topicId : undefined,
         deadline: date(task.deadline),
         startTime: task.startTime ? date(task.startTime) : undefined,
         endTime: task.endTime ? date(task.endTime) : undefined,
       });
     }),
-    events: value.events.map((event) => ({
+    events: value.events.map((event) => {
+      if (event.color !== undefined && !isTopicColor(event.color)) throw new Error("Invalid saved event color");
+      return {
       ...event,
+      topicId: topics.some((topic) => topic.id === event.topicId) ? event.topicId : undefined,
       startTime: date(event.startTime),
       endTime: date(event.endTime),
-    })),
+    };
+    }),
     studyBlocks: value.studyBlocks.map((block) => {
       if (
         !["planned", "completed", "unfinished"].includes(block.status) ||

@@ -1,15 +1,20 @@
 import { useState, type FormEvent } from "react";
-import { Task } from "@/datatypes";
+import { Task, type Topic } from "@/datatypes";
 import { localInput } from "@/lib/calendar";
+import { initialTopicSelection, resolveTopicSelection } from "@/lib/topics";
+import TopicPicker from "./TopicPicker";
 
 export default function AssignmentForm({
   task,
+  topics = [],
   onSave,
 }: {
   task?: Task;
-  onSave: (task: Task) => void;
+  topics?: Topic[];
+  onSave: (task: Task, topics: Topic[]) => void;
 }) {
   const [error, setError] = useState("");
+  const [topicSelection, setTopicSelection] = useState(() => initialTopicSelection(topics, task?.topicId, task?.color));
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -33,6 +38,13 @@ export default function AssignmentForm({
     const alreadyWorked = task
       ? task.estimatedTimeMinutes - task.remainingTimeMinutes
       : 0;
+    let selection;
+    try {
+      selection = resolveTopicSelection(topics, topicSelection);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not save topic.");
+      return;
+    }
     onSave(
       new Task({
         id: task?.id ?? crypto.randomUUID(),
@@ -43,7 +55,10 @@ export default function AssignmentForm({
           ? Math.max(0, minutes - alreadyWorked)
           : minutes,
         gradeWeight,
+        topicId: selection.topicId,
+        color: selection.color,
       }),
+      selection.topics,
     );
   }
   return (
@@ -62,6 +77,10 @@ export default function AssignmentForm({
           autoFocus
         />
       </label>
+      <TopicPicker topics={topics} value={topicSelection} onChange={(value) => {
+        setTopicSelection(value);
+        setError("");
+      }} />
       <label>
         Deadline
         <input

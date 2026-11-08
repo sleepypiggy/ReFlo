@@ -191,6 +191,7 @@ export default function Dashboard() {
   const list = (
     <AssignmentList
       tasks={schedule.tasks}
+      topics={schedule.topics}
       warnings={schedule.warnings}
       onAdd={() => setDialog({ type: "assignment" })}
       onEdit={(task) => setDialog({ type: "assignment", task })}
@@ -348,6 +349,7 @@ export default function Dashboard() {
                 {section === "calendar" ? (
                   <WeeklyCalendar
                     events={schedule.events}
+                    topics={schedule.topics}
                     tasks={schedule.tasks}
                     studyBlocks={schedule.studyBlocks}
                     onStudyClick={(id) => {
@@ -483,9 +485,11 @@ export default function Dashboard() {
           {dialog.type === "assignment" && (
             <AssignmentForm
               task={dialog.task}
-              onSave={(task) =>
+              topics={schedule.topics}
+              onSave={(task, topics) =>
                 changed({
                   ...schedule,
+                  topics,
                   tasks: schedule.tasks.some((item) => item.id === task.id)
                     ? schedule.tasks.map((item) =>
                       item.id === task.id ? task : item,
@@ -502,9 +506,11 @@ export default function Dashboard() {
             <>
               <EventForm
                 event={dialog.event}
-                onSave={(event) =>
+                topics={schedule.topics}
+                onSave={(event, topics) =>
                   changed({
                     ...schedule,
+                    topics,
                     events: schedule.events.some((item) => item.id === event.id)
                       ? schedule.events.map((item) =>
                         item.id === event.id ? event : item,

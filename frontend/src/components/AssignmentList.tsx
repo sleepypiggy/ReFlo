@@ -1,15 +1,19 @@
 import { AlertTriangle, Check, Pencil, Plus, Trash2 } from "lucide-react";
-import type { Task, SchedulingWarning } from "@/datatypes";
+import type { Task, Topic, SchedulingWarning } from "@/datatypes";
 import { dateLabel, hours } from "@/lib/calendar";
+import { topicAppearance } from "@/lib/topics";
+import type { CSSProperties } from "react";
 
 export default function AssignmentList({
   tasks,
+  topics = [],
   warnings,
   onEdit,
   onDelete,
   onAdd,
 }: {
   tasks: Task[];
+  topics?: Topic[];
   warnings: SchedulingWarning[];
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
@@ -43,6 +47,9 @@ export default function AssignmentList({
       {[...tasks]
         .sort((a, b) => +a.deadline - +b.deadline)
         .map((task) => {
+          const topic = topics.find((topic) => topic.id === task.topicId);
+          const color = topic?.color ?? task.color;
+          const appearance = topicAppearance(color);
           const progress = Math.max(
             0,
             Math.min(
@@ -57,7 +64,8 @@ export default function AssignmentList({
             .filter((w) => w.taskId === task.id)
             .reduce((sum, w) => sum + w.unscheduledMinutes, 0);
           return (
-            <article className="assignment" key={task.id}>
+            <article className={`assignment ${appearance.className}`} style={appearance.style as CSSProperties}
+              data-topic={topic?.id} data-colored={color ? "true" : undefined} key={task.id}>
               <div className="assignment-top">
                 <span
                   className={`task-status ${progress === 100 ? "done" : ""}`}
@@ -88,6 +96,7 @@ export default function AssignmentList({
                 </div>
               </div>
               <h3>{task.name}</h3>
+              {topic && <span className="topic-badge">{topic.name}</span>}
               <p
                 className={`deadline ${task.deadline < new Date() && progress < 100 ? "overdue" : ""}`}
               >
