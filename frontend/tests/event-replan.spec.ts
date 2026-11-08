@@ -1,5 +1,12 @@
 import { test, expect } from "@playwright/test";
 
+const normalizeStudyBlocks = <T extends { startTime: string; endTime: string }>(blocks: T[]) =>
+  blocks.map(block => ({
+    ...block,
+    startTime: new Date(block.startTime).toISOString(),
+    endTime: new Date(block.endTime).toISOString(),
+  }));
+
 test("a failed automatic event replan saves the event and study history, then retries", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
   await page.addInitScript(() => {
@@ -32,7 +39,7 @@ test("a failed automatic event replan saves the event and study history, then re
   expect(failed.events[0].name).toBe("Concert");
   expect(failed.events[0].startTime).toBe("2026-11-10T09:00:00.000Z");
   expect(failed.events[0].endTime).toBe("2026-11-10T10:00:00.000Z");
-  expect(failed.studyBlocks).toEqual(before.studyBlocks);
+  expect(normalizeStudyBlocks(failed.studyBlocks)).toEqual(normalizeStudyBlocks(before.studyBlocks));
   expect(failed.tasks).toEqual(before.tasks);
   await page.reload();
   await expect(page.locator(".plan-dirty")).toBeVisible();
@@ -44,8 +51,10 @@ test("a failed automatic event replan saves the event and study history, then re
   await expect(page.locator(".plan-dirty")).toHaveCount(0);
   const after = await saved();
   expect(after.events).toEqual(failed.events);
-  expect(after.studyBlocks.find((block: { id: string }) => block.id === "history")).toEqual(before.studyBlocks[0]);
-  expect(after.studyBlocks.find((block: { id: string }) => block.id === "moved").startTime).toBe("2026-11-10T10:00:00.000Z");
+  expect(normalizeStudyBlocks(after.studyBlocks)).toEqual(normalizeStudyBlocks([
+    before.studyBlocks[0],
+    { id: "moved", taskId: "essay", startTime: "2026-11-10T10:00:00Z", endTime: "2026-11-10T11:00:00Z", status: "planned" },
+  ]));
   const review = page.getByRole("region", { name: "Latest schedule changes" });
   await expect(review).toContainText("1 moved, 0 added, 0 removed");
   await expect(review).toContainText("Previous:");
@@ -61,6 +70,6 @@ test("a failed automatic event replan saves the event and study history, then re
   const undone = await saved();
   expect(undone.events).toEqual(failed.events);
   expect(undone.tasks).toEqual(before.tasks);
-  expect(undone.studyBlocks).toEqual(before.studyBlocks);
+  expect(normalizeStudyBlocks(undone.studyBlocks)).toEqual(normalizeStudyBlocks(before.studyBlocks));
   await expect(page.locator(".plan-dirty")).toBeVisible();
 });
