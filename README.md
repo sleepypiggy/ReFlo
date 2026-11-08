@@ -45,6 +45,9 @@ The dashboard separates remaining, upcoming and unscheduled time. JSON backup an
 restore work for both demo and real workspaces, with validation and confirmation.
 See [the frontend guide](frontend/README.md#planning-controls-and-backups) for details.
 Automated project checks are defined in `.github/workflows/checks.yml`.
+Seeded scheduler invariants and a bounded independent exhaustive solver measure
+constraint correctness and heuristic gaps; see
+[scheduler verification](docs/SCHEDULER_VERIFICATION.md) for commands and results.
 
 Study sessions that cannot be dragged show a lock icon. Hover over the block or
 open it (click, Enter or Space) to see the specific reason: past time, already

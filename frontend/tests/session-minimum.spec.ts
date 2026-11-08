@@ -19,6 +19,7 @@ test("Preferences rejects session maxima below 15 and saves the boundary", async
 });
 
 test("Real backend shortages display the specific small-work explanation", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-10T08:00:00Z"));
   await page.addInitScript(() => {
     const schedule = {
       weekStart: "2026-11-09T00:00:00Z", source: "backend", needsReplan: false,
@@ -33,7 +34,7 @@ test("Real backend shortages display the specific small-work explanation", async
   });
   await page.goto("/");
   await page.locator(".shortage-summary").click();
-  await expect(page.locator(".shortage-breakdown")).toContainText("8m unscheduled");
-  await expect(page.locator(".shortage-breakdown")).toContainText("below the 15-minute minimum");
-  await expect(page.locator(".shortage-breakdown")).toContainText("not been rounded up");
+  await expect(page.locator(".shortage-breakdown")).toContainText("8 minutes remain unscheduled");
+  await expect(page.locator(".shortage-breakdown")).toContainText("15-minute minimum session length");
+  await expect(page.locator(".shortage-breakdown")).toContainText("Your estimate is unchanged");
 });
