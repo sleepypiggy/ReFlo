@@ -16,7 +16,7 @@ from test_schedule import request_payload
 
 DRAFT = {
     "type": "event_draft", "title": "Work shift",
-    "start": "2026-11-10T19:00:00-08:00", "end": "2026-11-10T20:00:00-08:00",
+    "start": "2026-11-10T19:00:00-07:00", "end": "2026-11-10T20:00:00-07:00",
 }
 QUESTION = {"type": "clarification", "question": "What time does your shift start and end?"}
 
@@ -34,7 +34,7 @@ class AssistantApiTests(unittest.TestCase):
         self.gemini = self.factory.return_value.__enter__.return_value
         self.payload = {
             "message": "I have work from 7 to 8 tonight",
-            "current_time": "2026-11-10T18:00:00-08:00",
+            "current_time": "2026-11-10T18:00:00-07:00",
             "timezone": "America/Vancouver",
         }
 
@@ -78,6 +78,19 @@ class AssistantApiTests(unittest.TestCase):
         self.assertEqual(response.json(), QUESTION)
         self.assertEqual(json.loads(self.gemini.models.generate_content.call_args.kwargs["contents"]), self.payload)
 
+    def test_browser_utc_clock_is_localized_before_resolving_tonight(self):
+        self.respond_with(DRAFT)
+        for clock, local_clock in (
+            ("2026-11-11T01:00:00Z", "2026-11-10T18:00:00-07:00"),
+            ("2026-07-11T01:00:00Z", "2026-07-10T18:00:00-07:00"),
+        ):
+            with self.subTest(clock=clock):
+                response = self.client.post("/assistant/parse", json={**self.payload, "current_time": clock})
+                self.assertEqual(response.status_code, 200, response.text)
+                sent = json.loads(self.gemini.models.generate_content.call_args.kwargs["contents"])
+                self.assertEqual(sent["current_time"], local_clock)
+                self.assertEqual(sent["timezone"], "America/Vancouver")
+
     def test_missing_key_does_not_initialize_client_or_break_scheduler(self):
         self.settings.return_value = AssistantSettings(_env_file=None, gemini_api_key=None)
         response = self.client.post("/assistant/parse", json=self.payload)
@@ -108,10 +121,10 @@ class AssistantApiTests(unittest.TestCase):
             {**DRAFT, "end": "2026-11-10T20:00:00"},
             {**DRAFT, "start": "2026-11-10T19:00:00-08:99"},
             {**DRAFT, "end": DRAFT["start"]},
-            {**DRAFT, "end": "2026-11-10T18:00:00-08:00"},
-            # 20:00Z is earlier than the given 19:00-08:00 start.
+            {**DRAFT, "end": "2026-11-10T18:00:00-07:00"},
+            # 20:00Z is earlier than the given 19:00-07:00 start.
             {**DRAFT, "end": "2026-11-10T20:00:00Z"},
-            {**DRAFT, "start": "2026-02-30T19:00:00-08:00"},
+            {**DRAFT, "start": "2026-02-30T19:00:00-07:00"},
             {**DRAFT, "title": " "}, {**DRAFT, "calendar_updated": True},
             {**DRAFT, "type": "event"},
             {"type": "clarification", "question": " "},
