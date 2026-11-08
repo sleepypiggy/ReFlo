@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [section, setSection] = useState<"calendar" | "assignments">(
     "calendar",
   );
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [healthBusy, setHealthBusy] = useState(false);
   const [health, setHealth] = useState("Not checked");
@@ -314,19 +315,6 @@ export default function Dashboard() {
                 <span className="nav-count">{schedule.tasks.length}</span>
               </button>
             </nav>
-            <div className="sidebar-actions">
-              <button
-                className="button primary"
-                onClick={() => void scheduleWork()}
-              >
-                {busy ? (
-                  <LoaderCircle className="spin" size={17} />
-                ) : (
-                  <Sparkles size={17} />
-                )}
-                Generate Schedule
-              </button>
-            </div>
             <div className="sidebar-bottom">
               <button
                 className="nav-item"
@@ -356,6 +344,17 @@ export default function Dashboard() {
                   </h1>
                 </div>
                 <div className="page-actions">
+                  <button
+                    className="button primary"
+                    onClick={() => void scheduleWork()}
+                  >
+                    {busy ? (
+                      <LoaderCircle className="spin" size={17} />
+                    ) : (
+                      <Sparkles size={17} />
+                    )}
+                    Generate Schedule
+                  </button>
                   <button
                     className="button"
                     onClick={() => setDialog({ type: "assignment" })}
@@ -407,64 +406,79 @@ export default function Dashboard() {
                 </div>
               )}
               {review?.mode === mode && <PlanReview {...review} onDismiss={() => setReview(null)} />}
-              {mode === "backend" && (
-                <AssistantPanel
-                  key={mode}
-                  schedule={schedule}
-                  onBusy={setBusy}
-                  onApply={(next) => {
-                    const at = new Date();
-                    apply(next);
-                    setUndo({ mode, schedule: { ...schedule, tasks: next.tasks, events: next.events, topics: next.topics } });
-                    setReview({ mode, before: schedule, after: next, at });
-                    setError("");
-                    setNotice("Changes applied and study schedule updated.");
-                  }}
-                />
-              )}
               {schedule.warnings.length > 0 && (
                 <TimeShortagePanel
                   schedule={schedule}
                   demo={mode === "demo"}
                 />
               )}
-              <div
-                className={
-                  section === "calendar" ? "work-grid" : "assignment-page"
-                }
-              >
-                {section === "calendar" ? (
-                  <WeeklyCalendar
-                    changedBlockIds={review?.mode === mode ? planChangeDetails(review.before, review.after, review.at).flatMap(change => change.after ? [change.after.id] : []) : undefined}
-                    busy={busy}
-                    onMove={move}
-                    events={schedule.events}
-                    topics={schedule.topics}
-                    tasks={schedule.tasks}
-                    studyBlocks={schedule.studyBlocks}
-                    onStudyClick={(id) => {
-                      if (!busy) setDialog({ type: "session", id });
-                    }}
-                    onEventClick={(id) =>
-                      !busy &&
-                      setDialog({
-                        type: "event",
-                        event: schedule.events.find(
-                          (event) => event.id === id,
-                        ),
-                      })
-                    }
-                  />
-                ) : (
-                  <aside className="assignment-panel">
-                    {list}
-                    <div className="remaining-note">
-                      <Clock3 size={16} />
-                      <span>
-                        <strong>{hours(remaining)}</strong> of assignment work
-                        remaining
-                      </span>
-                    </div>
+              {mode === "backend" && (
+                <button
+                  className="button assistant-toggle"
+                  type="button"
+                  aria-expanded={assistantOpen}
+                  aria-controls="schedule-assistant"
+                  onClick={() => setAssistantOpen(open => !open)}
+                >
+                  {assistantOpen ? "Hide assistant" : "Show assistant"}
+                </button>
+              )}
+              <div className={mode === "backend" ? "schedule-workspace with-assistant" : "schedule-workspace"}>
+                <div
+                  className={
+                    section === "calendar" ? "work-grid" : "assignment-page"
+                  }
+                >
+                  {section === "calendar" ? (
+                    <WeeklyCalendar
+                      changedBlockIds={review?.mode === mode ? planChangeDetails(review.before, review.after, review.at).flatMap(change => change.after ? [change.after.id] : []) : undefined}
+                      busy={busy}
+                      onMove={move}
+                      events={schedule.events}
+                      topics={schedule.topics}
+                      tasks={schedule.tasks}
+                      studyBlocks={schedule.studyBlocks}
+                      onStudyClick={(id) => {
+                        if (!busy) setDialog({ type: "session", id });
+                      }}
+                      onEventClick={(id) =>
+                        !busy &&
+                        setDialog({
+                          type: "event",
+                          event: schedule.events.find(
+                            (event) => event.id === id,
+                          ),
+                        })
+                      }
+                    />
+                  ) : (
+                    <aside className="assignment-panel">
+                      {list}
+                      <div className="remaining-note">
+                        <Clock3 size={16} />
+                        <span>
+                          <strong>{hours(remaining)}</strong> of assignment work
+                          remaining
+                        </span>
+                      </div>
+                    </aside>
+                  )}
+                </div>
+                {mode === "backend" && (
+                  <aside id="schedule-assistant" className="assistant-column" data-open={assistantOpen}>
+                    <AssistantPanel
+                      key={mode}
+                      schedule={schedule}
+                      onBusy={setBusy}
+                      onApply={(next) => {
+                        const at = new Date();
+                        apply(next);
+                        setUndo({ mode, schedule: { ...schedule, tasks: next.tasks, events: next.events, topics: next.topics } });
+                        setReview({ mode, before: schedule, after: next, at });
+                        setError("");
+                        setNotice("Changes applied and study schedule updated.");
+                      }}
+                    />
                   </aside>
                 )}
               </div>
