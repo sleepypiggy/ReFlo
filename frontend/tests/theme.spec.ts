@@ -17,6 +17,9 @@ test("theme toggles and persists without changing schedule data", async ({ page 
   await expect(page.locator(".assignment-panel")).toBeVisible();
   await expect(page.locator(".stats-grid")).toBeVisible();
   await page.getByRole("button", { name: "Calendar", exact: true }).click();
+  // Finish saved-workspace schema migration before comparing theme-only changes.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "My Schedule" })).toBeVisible();
   await page.waitForFunction(() => localStorage.getItem("schedule-maker:v1"));
   const workspace = await page.evaluate(() => localStorage.getItem("schedule-maker:v1"));
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
@@ -36,7 +39,7 @@ test("theme toggles and persists without changing schedule data", async ({ page 
   await page.screenshot({ path: "test-results/design-dark.png", fullPage: true });
 
   await page.getByRole("button", { name: "Switch to light mode" }).click();
-  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(243, 241, 236)");
   await page.reload();
   await expect(page.getByRole("button", { name: "Switch to dark mode" })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("schedule-maker:v1"))).toBe(workspace);

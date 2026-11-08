@@ -20,6 +20,7 @@ describe("API error messages", () => {
   });
   it("supports ordinary API errors, missing endpoints, and non-JSON responses", () => {
     assert.match(formatApiError(503, "/assistant/parse", { error: "Assistant unavailable" }), /Assistant unavailable/);
+    assert.match(formatApiError(503, "/assistant/parse", undefined), /GEMINI_API_KEY/);
     assert.match(formatApiError(404, "/schedule", {}), /not implemented/);
     assert.match(formatApiError(502, "/schedule", undefined), /failed \(502\)/);
   });

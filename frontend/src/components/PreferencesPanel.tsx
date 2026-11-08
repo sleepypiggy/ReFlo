@@ -97,6 +97,16 @@ export default function PreferencesPanel({
         Spread study sessions across days
       </label>
       <p className="muted small">Balance work across days and morning, afternoon, and evening slots when available. Conflicts, sleep and deadlines take priority; tight days may still need consecutive sessions.</p>
+
+      <p className="muted small">
+        Earlier deadlines reserve study slots first. When work does not fit,
+        priority combines grade weight with remaining work relative to available
+        time before each deadline. Equal scores use the earlier deadline, then
+        greater deadline pressure, then assignment ID. Sleep, fixed commitments,
+        and study limits stay protected.
+        Edit an assignment&apos;s grade weight or deadline, then generate a new
+        schedule to account for changes.
+      </p>
       {error && (
         <p className="error" role="alert">
           {error}

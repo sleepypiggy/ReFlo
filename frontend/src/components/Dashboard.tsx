@@ -31,6 +31,8 @@ import StudySessionModal from "./StudySessionModal";
 import WeeklyCalendar from "./WeeklyCalendar";
 import TimeShortagePanel from "./TimeShortagePanel";
 import ThemeToggle from "./ThemeToggle";
+import AssistantPanel from "./AssistantPanel";
+import CalendarFiles from "./CalendarFiles";
 
 type Dialog =
   | { type: "assignment"; task?: Task }
@@ -218,6 +220,7 @@ export default function Dashboard() {
   const list = (
     <AssignmentList
       tasks={schedule.tasks}
+      topics={schedule.topics}
       warnings={schedule.warnings}
       onAdd={() => setDialog({ type: "assignment" })}
       onEdit={(task) => setDialog({ type: "assignment", task })}
@@ -370,6 +373,18 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
+              {mode === "backend" && (
+                <AssistantPanel
+                  key={mode}
+                  schedule={schedule}
+                  onBusy={setBusy}
+                  onApply={(next) => {
+                    apply(next);
+                    setError("");
+                    setNotice("Commitment and revised study schedule applied.");
+                  }}
+                />
+              )}
               {schedule.warnings.length > 0 && (
                 <TimeShortagePanel
                   schedule={schedule}
@@ -384,6 +399,7 @@ export default function Dashboard() {
                 {section === "calendar" ? (
                   <WeeklyCalendar
                     events={schedule.events}
+                    topics={schedule.topics}
                     tasks={schedule.tasks}
                     studyBlocks={schedule.studyBlocks}
                     onStudyClick={(id) => {
@@ -412,6 +428,7 @@ export default function Dashboard() {
                   </aside>
                 )}
               </div>
+              <CalendarFiles key={`calendar-files-${mode}`} schedule={schedule} onImport={changed} />
               {section === "assignments" && (
               <div className="stats-grid">
                 <div className="stat">
@@ -540,9 +557,11 @@ export default function Dashboard() {
           {dialog.type === "assignment" && (
             <AssignmentForm
               task={dialog.task}
-              onSave={(task) =>
+              topics={schedule.topics}
+              onSave={(task, topics) =>
                 changed({
                   ...schedule,
+                  topics,
                   tasks: schedule.tasks.some((item) => item.id === task.id)
                     ? schedule.tasks.map((item) =>
                       item.id === task.id ? task : item,
@@ -559,9 +578,11 @@ export default function Dashboard() {
             <>
               <EventForm
                 event={dialog.event}
-                onSave={(event) =>
+                topics={schedule.topics}
+                onSave={(event, topics) =>
                   changed({
                     ...schedule,
+                    topics,
                     events: schedule.events.some((item) => item.id === event.id)
                       ? schedule.events.map((item) =>
                         item.id === event.id ? event : item,

@@ -261,3 +261,26 @@ No extra work becomes unscheduled to satisfy a preferred time period.
 For example, three one-hour sessions with a free 09:00-22:00 day can start at
 09:00, 12:00 and 17:00. A noon-to-13:00 meeting moves the afternoon session to
 13:00. If only the afternoon is free, all work may remain in the afternoon.
+
+## Calendar import/export representation
+
+The `/schedule` version 1 contract is unchanged. The browser expands supported
+bounded weekly calendar series (including EXDATE and cancelled/moved overrides)
+into independent fixed commitments. Each occurrence sends UTC `start`/`end` and
+an empty `repeat_on`; the backend must not reinterpret these as local weekly rules.
+This preserves source-calendar instants even when its timezone differs from the
+user's scheduling timezone. Response overlap validation uses the same occurrences.
+
+Persisted Events optionally carry `calendarImport: { uid, recurrenceId?, timezone }`.
+The occurrence ID is `ics-` plus SHA-256 of the JSON pair `[UID, original UTC
+occurrence instant]`; single events use `"single"` as the second element. Moved
+events retain their original occurrence identity. Repeated imports skip IDs already
+present. This metadata is local and not sent to Python. Existing storage key and
+backup version remain at v1: optional metadata needs no destructive migration,
+older records retain their dates and manual `repeatOn` semantics, and imported
+metadata is validated/revived with backups. Successful import sets `needsReplan`.
+
+Study export serializes eligible planned blocks as UTC VEVENTs with stable
+`<block.id>@schedule-maker.local` UIDs, DTSTAMP, SUMMARY and calendar metadata.
+See [supported calendar formats and limits](README.md#calendar-files). Imports and
+exports are snapshots; repeated import is duplicate prevention, not synchronization.

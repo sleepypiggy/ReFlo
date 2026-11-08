@@ -35,24 +35,15 @@ export default function TimeShortagePanel({ schedule, demo }: {
         You have <strong>{time(required)} of work</strong>
         {deadline && <> due by {deadline.toLocaleDateString(undefined, {
           weekday: "short", month: "short", day: "numeric", year: "numeric",
-        })}</>}. Under your deadlines and preferences, the current plan fits{" "}
+        })}</>}. Under your current preferences, the current plan fits{" "}
         <strong>{time(Math.max(0, required - missing))}</strong>;{" "}
         <strong>{time(missing)} remains unscheduled</strong>.
       </p>}
-      <p className="muted small">
-        Earlier deadlines reserve study slots first. When work does not fit,
-        priority combines grade weight with remaining work relative to available
-        time before each deadline. Equal scores use the earlier deadline, then
-        greater deadline pressure, then assignment ID. Sleep, fixed commitments,
-        and study limits stay protected.
-        Edit an assignment&apos;s grade weight or deadline, then generate a new
-        schedule to account for changes.
-      </p>
       <ul className="shortage-breakdown">
         {schedule.warnings.map((warning, index) => (
           <li key={`${warning.taskId}-${index}`}>
             <strong>{schedule.tasks.find((task) => task.id === warning.taskId)?.name}</strong>
-            : {time(warning.unscheduledMinutes)} unscheduled — {warning.reason}
+            : {time(warning.unscheduledMinutes)} unscheduled — {demo ? warning.reason : "Work could not be placed before the deadline under your current preferences."}
           </li>
         ))}
       </ul>

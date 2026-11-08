@@ -1,6 +1,14 @@
 /** JavaScript weekday numbering: Sunday = 0, Saturday = 6. */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+export type TopicColor = "blue" | "green" | "gold" | "purple" | "rose" | `#${string}`;
+
+export interface Topic {
+  id: string;
+  name: string;
+  color: TopicColor;
+}
+
 export interface TaskInput {
   id: string;
   name: string;
@@ -12,6 +20,8 @@ export interface TaskInput {
   deadline: Date;
   /** Percentage from 0 to 100. */
   gradeWeight: number;
+  topicId?: string;
+  color?: TopicColor;
 }
 
 export class Task {
@@ -23,6 +33,8 @@ export class Task {
   endTime?: Date;
   deadline: Date;
   gradeWeight: number;
+  topicId?: string;
+  color?: TopicColor;
 
   constructor(input: TaskInput) {
     this.id = input.id;
@@ -34,6 +46,8 @@ export class Task {
     this.endTime = input.endTime;
     this.deadline = input.deadline;
     this.gradeWeight = input.gradeWeight;
+    this.topicId = input.topicId;
+    this.color = input.color;
   }
 }
 
@@ -47,6 +61,10 @@ export interface Event {
   remainingTimeMinutes: number;
   /** When set, repeat weekly on these days at the original local times. */
   repeatOn?: Weekday[];
+  /** Imported occurrences are finite UTC instants, never local repeatOn rules. */
+  calendarImport?: { uid: string; recurrenceId?: string; timezone: string };
+  topicId?: string;
+  color?: TopicColor;
 }
 
 export interface Preferences {
@@ -74,6 +92,8 @@ export interface Schedule {
   /** Local date marking the first day of the displayed week. */
   weekStart: Date;
   tasks: Task[];
+  /** Shared class/topic colors; older saved schedules may omit this list. */
+  topics?: Topic[];
   events: Event[];
   preferences: Preferences;
   skippedSessions?: SkippedSession[];
