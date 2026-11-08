@@ -403,6 +403,7 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   border-left-color: var(--unfinished-ink);
   border-left-style: dashed;
 }
+.plan-actions { margin: 8px 0 20px; }
 .backup-actions, .plan-actions {
   display: flex;
   flex-wrap: wrap;

@@ -35,7 +35,7 @@ export default function TimeShortagePanel({ schedule, demo }: {
         You have <strong>{time(required)} of work</strong>
         {deadline && <> due by {deadline.toLocaleDateString(undefined, {
           weekday: "short", month: "short", day: "numeric", year: "numeric",
-        })}</>}. Under your deadlines and preferences, the current plan fits{" "}
+        })}</>}. Under your current preferences, the current plan fits{" "}
         <strong>{time(Math.max(0, required - missing))}</strong>;{" "}
         <strong>{time(missing)} remains unscheduled</strong>.
       </p>}
@@ -43,7 +43,7 @@ export default function TimeShortagePanel({ schedule, demo }: {
         {schedule.warnings.map((warning, index) => (
           <li key={`${warning.taskId}-${index}`}>
             <strong>{schedule.tasks.find((task) => task.id === warning.taskId)?.name}</strong>
-            : {time(warning.unscheduledMinutes)} unscheduled — {warning.reason}
+            : {time(warning.unscheduledMinutes)} unscheduled — {demo ? warning.reason : "Work could not be placed before the deadline under your current preferences."}
           </li>
         ))}
       </ul>

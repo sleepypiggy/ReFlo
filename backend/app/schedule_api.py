@@ -345,6 +345,6 @@ def generate_schedule(request: ScheduleRequest) -> ScheduleResponse:
         result.append(ScheduledBlock(id=identifier, task_id=task_id, start=start, end=end))
     scheduled = _totals(output)
     warnings = [Shortage(task_id=task.id, minutes=demand[task.id] - scheduled.get(task.id, 0),
-                        reason="Work could not be placed before the deadline under your preferences and priority policy.")
+                        reason="Work could not be placed before the deadline under your current preferences.")
                 for task in tasks if demand[task.id] > scheduled.get(task.id, 0)]
     return ScheduleResponse(study_blocks=result, unscheduled=warnings)
