@@ -1,6 +1,6 @@
-# Schedule Maker Backend
+# ReFlo Backend
 
-FastAPI backend for Schedule Maker, with multi-assignment dashboard scheduling at
+FastAPI backend for ReFlo, with multi-assignment dashboard scheduling at
 `POST /schedule` and the original single-assignment `POST /api/plan`. Includes
 replanning, fixed-event subtraction, sleep preferences, Pydantic request
 validation, UTC responses, and configurable CORS. Database storage and
@@ -76,7 +76,7 @@ The backend reads `backend/.env`, with environment variables taking precedence.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `APP_NAME` | Title in the API documentation | `Schedule Maker API` |
+| `APP_NAME` | Title in the API documentation | `ReFlo API` |
 | `CORS_ORIGINS` | JSON array of allowed frontend origins | `http://localhost:3000`, `http://127.0.0.1:3000` |
 
 Run the Next.js frontend in a separate terminal. It can call the backend at

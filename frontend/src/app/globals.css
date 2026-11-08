@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Schedule Maker design tokens — supplied DESIGN.md, adapted from the
+/* ReFlo design tokens — supplied DESIGN.md, adapted from the
    Pixloop/Memotron analysis (CC BY 4.0): https://www.pixloop.ai/design-md/memotron */
 :root, [data-theme="light"] {
   color-scheme: light;

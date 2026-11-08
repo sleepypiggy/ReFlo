@@ -1,4 +1,4 @@
-﻿# Schedule Maker frontend
+﻿# ReFlo frontend
 
 Next.js dashboard for assignment planning, fixed commitments, and study progress.
 
@@ -16,7 +16,7 @@ commitments to edit/delete; click study sessions to complete or report unfinishe
 work. Assignment deletion also removes its sessions after a confirmation. Updating
 inputs does not automatically regenerate the plan; use Generate Schedule.
 
-In **Real backend**, use **Schedule assistant** to create an assignment or a single
+In **Real backend**, use **Flo** to create an assignment or a single
 fixed event through chat. `POST /assistant/chat` receives role-based history, the
 pending draft, the current time, and browser timezone. The backend asks for all
 missing/invalid fields together; an assignment always needs a name, deadline date

@@ -11,7 +11,7 @@ const sen = Sen({
 });
 
 export const metadata: Metadata = {
-  title: "Schedule Maker · Your study week",
+  title: "ReFlo · Your study week",
   description:
     "Plan university assignments around your commitments and replan unfinished work.",
 };
