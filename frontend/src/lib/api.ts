@@ -11,7 +11,9 @@ async function request(path: string, init?: RequestInit) {
   try {
     const response = await fetch(`${API_URL}${path}`, {
       ...init,
-      signal: AbortSignal.timeout(path.startsWith("/assistant/") ? 40000 : 15000),
+      signal: init?.signal
+        ? AbortSignal.any([init.signal, AbortSignal.timeout(15000)])
+        : AbortSignal.timeout(path.startsWith("/assistant/") ? 40000 : 15000),
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
     if (!response.ok) {
@@ -42,10 +44,11 @@ export async function checkHealth() {
     throw new Error("Unexpected backend health response.");
 }
 
-export async function generateSchedule(schedule: Schedule, now = new Date()) {
+export async function generateSchedule(schedule: Schedule, now = new Date(), signal?: AbortSignal) {
   const data = await request("/schedule", {
     method: "POST",
     body: JSON.stringify(toScheduleRequest(schedule, now)),
+    signal,
   });
   return fromScheduleResponse(data, schedule, now);
 }

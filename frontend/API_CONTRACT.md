@@ -9,6 +9,26 @@ Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in your local `frontend/.env.loc
 `GET /health` must return `{"status":"ok"}`; use **Test backend** in the footer.
 FastAPI currently permits browser origins localhost:3000 and 127.0.0.1:3000.
 
+## Informational shortage suggestions
+
+In the real workspace, **Check daily-limit suggestions** calls the same `/schedule`
+endpoint and response validator without saving any returned plan. It first checks
+the current limit, then tests increases of 30, 60, and 120 minutes (capped at 1440).
+All calls share the same current time and a 12-second request budget. Only the daily
+limit changes; tasks, estimates, deadlines, commitments, sleep, protected sessions,
+breaks, session limits, and scheduling policy remain unchanged.
+
+Each assignment's suggestion reports verified minute gains, dated changes, remaining
+shortages, and any other assignment losing time. Alternatives are checked separately;
+their effects must not be added together. A successful trial does not establish the
+original shortage's sole cause. Prefer results with fewer lost minutes, then more
+minutes recovered, retaining the lower tested limit on ties.
+
+Suggestions are temporary UI state. Relevant edits invalidate them and cancel pending
+requests; results expire after five minutes or when a planned session begins. Stale
+shortages require regeneration. Failed or inconsistent responses publish no suggestions
+and leave the saved plan unchanged. Demo mode keeps its authored shortage panel.
+
 ## Request: POST /schedule
 
 ```json
