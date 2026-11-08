@@ -436,3 +436,17 @@ h1 { font-size: 28px; font-weight: 600; letter-spacing: -.7px; line-height: 1.25
   flex-shrink: 0;
   accent-color: var(--accent-blue);
 }
+
+/* Conversational assistant: one transcript and an unsaved, structured draft. */
+.assistant-transcript { display: flex; flex-direction: column; align-items: flex-start; gap: 13px; max-height: 340px; overflow-y: auto; padding: 4px; }
+.chat-message { max-width: 90%; padding: 13px 17px; border-radius: 13px; background: var(--surface-raised); color: var(--ink); overflow-wrap: anywhere; }
+.chat-message.chat-user { align-self: flex-end; background: var(--lecture-bg); color: var(--lecture-ink); }
+.chat-speaker { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.chat-message p { white-space: pre-wrap; }
+.chat-draft { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 13px; padding: 17px; }
+.chat-draft h3 { font-size: 16px; font-weight: 600; margin-bottom: 13px; }
+.chat-draft dl { display: grid; gap: 8px; margin: 0 0 13px; }
+.chat-draft dl > div { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr); gap: 13px; }
+.chat-draft dt { color: var(--secondary-ink); font-size: 13px; }
+.chat-draft dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .chat-message { max-width: 100%; } .chat-draft dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; } }

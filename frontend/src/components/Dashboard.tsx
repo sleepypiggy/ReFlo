@@ -409,7 +409,7 @@ export default function Dashboard() {
                   onApply={(next) => {
                     apply(next);
                     setError("");
-                    setNotice("Commitment and revised study schedule applied.");
+                    setNotice("Changes applied and study schedule updated.");
                   }}
                 />
               )}

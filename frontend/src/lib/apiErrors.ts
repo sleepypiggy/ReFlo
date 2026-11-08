@@ -1,7 +1,7 @@
 /** Show validation fields without discarding the backend's useful explanation. */
 export function formatApiError(status: number, path: string, payload: unknown): string {
   const preserved = "Your existing schedule is preserved.";
-  if (status === 503 && path === "/assistant/parse") {
+  if (status === 503 && path.startsWith("/assistant/")) {
     return `Assistant unavailable. Check the backend GEMINI_API_KEY configuration or try again later. ${preserved}`;
   }
   if (status === 404 && path === "/schedule") {

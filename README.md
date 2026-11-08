@@ -65,10 +65,11 @@ replanning fails, the event remains saved and Generate Schedule retries the plan
 
 ## API Integration
 
-The optional Gemini `POST /assistant/parse` endpoint is also integrated. See
-[assistant setup and draft contract](docs/ASSISTANT_API.md). Calendar scheduling
-works without a Gemini key; assistant input and Apply/Cancel preview UI are not
-yet implemented.
+The optional Gemini `POST /assistant/chat` endpoint powers a conversational
+assignment/event assistant with missing-field questions and an Apply/Cancel
+schedule preview. The legacy event-only `/assistant/parse` endpoint remains
+available. See [assistant setup and draft contract](docs/ASSISTANT_API.md).
+Calendar scheduling works without a Gemini key.
 
 ### Dashboard endpoint: `POST /schedule`
 
