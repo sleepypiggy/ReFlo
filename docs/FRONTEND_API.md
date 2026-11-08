@@ -1,5 +1,13 @@
 # Frontend API Handoff
 
+The dashboard integration is now live through **`POST /schedule`**. See the
+[dashboard contract](../frontend/API_CONTRACT.md) and
+[example request](../examples/schedule-request.json). Run `npm run test:live`
+from `frontend` to verify the real browser-to-Python flow.
+
+The original `/api/plan` single-assignment endpoint below is retained for
+prototype compatibility. The dashboard uses `/schedule` instead.
+
 The scheduler and availability functions are integrated into **FastAPI**.
 
 - **Planning/replanning:** `POST http://127.0.0.1:8000/api/plan`

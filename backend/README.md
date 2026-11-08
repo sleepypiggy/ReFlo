@@ -1,6 +1,7 @@
 # Schedule Maker Backend
 
-FastAPI backend for Schedule Maker, with real single-assignment scheduling and
+FastAPI backend for Schedule Maker, with multi-assignment dashboard scheduling at
+`POST /schedule` and the original single-assignment `POST /api/plan`. Includes
 replanning, fixed-event subtraction, sleep preferences, Pydantic request
 validation, UTC responses, and configurable CORS. Database storage and
 authentication are not implemented.
@@ -95,7 +96,8 @@ The configuration follows FastAPI's documentation for
 backend/
   app/
     __init__.py
-    api.py            # Request/response models and planning endpoint
+    api.py            # Prototype single-assignment endpoint
+    schedule_api.py   # Dashboard contract, shared allocation, recurrence/daily limits
     scheduler.py      # Scheduling and replanning algorithm
     availability.py   # Free-window calculation
     config.py         # Environment settings
@@ -111,6 +113,6 @@ From the repository root in PowerShell:
 
 ```powershell
 .\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
-.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability
+.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability test_schedule
 .\backend\.venv\Scripts\python.exe demo_week.py
 ```

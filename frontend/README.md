@@ -18,8 +18,9 @@ inputs does not automatically regenerate the plan; use Generate Schedule.
 
 Backend setup and JSON examples: [API_CONTRACT.md](API_CONTRACT.md).
 Validation results and design-check limitations: [VALIDATION.md](VALIDATION.md).
-The existing `/health` endpoint can be checked from the footer. The Python teammate
-must implement `/schedule` before real generation/rescheduling works end to end.
+The `/health` endpoint can be checked from the footer. FastAPI now implements
+`POST /schedule`; Real backend mode generates and replans actual Python study
+blocks, including shared availability, sleep, commitments, and daily limits.
 
 ```sh
 npm run lint
@@ -41,3 +42,12 @@ FullCalendar v7 includes timeGrid and classic theme plugins within its React pac
 The existing design skill informed spacing, typography, keyboard access, and visual
 consistency. Dashboard requirements take priority over its marketing hero/animation
 recipes. No authentication, database, drag-and-drop, or frontend scheduler is used.
+
+## Live backend verification
+
+From this directory, run `npm run test:live`. This starts isolated FastAPI (8100)
+and Next.js development (3101) servers and uses real browser HTTP requests, with
+no mocked scheduling responses. It verifies generation, unfinished work, a fixed
+shift causing a shortage, UTC/Vancouver rendering, and persistence after refresh.
+The backend virtual environment and dependencies must already be installed.
+The test uses Microsoft Edge by default and closes both test servers afterward.

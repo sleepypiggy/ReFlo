@@ -1,7 +1,8 @@
-# Scheduling API contract (provisional, version 1)
+# Scheduling API contract (version 1)
 
-The source of truth for frontend JSON mapping and validation is `src/lib/apiAdapter.ts`.
-The Python scheduler is not implemented by this frontend. No backend files were changed.
+Frontend mapping and validation live in `src/lib/apiAdapter.ts`. FastAPI implements
+this contract in `backend/app/schedule_api.py` using the shared Python scheduler
+and availability function. The prototype `/api/plan` endpoint remains supported.
 
 Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in your local `frontend/.env.local`
 (ignored by Git). This is also the default. Restart Next.js after changing it.
@@ -117,3 +118,27 @@ authored lectures, volleyball, dinner, three assignments, and seven study sessio
 Generate replays existing sample sessions and reports uncovered remaining work; it
 does not run a scheduling algorithm or claim to fit newly entered work. Switching
 to real mode starts an empty independent workspace. FullCalendar only renders state.
+
+## Implemented scheduling rules and limits
+
+- Assignments share free time and daily study capacity. Allocate by earliest
+  deadline, then higher grade weight, then task ID; this is deterministic priority
+  ordering, not an AI estimate or an interactive priority-selection dialog.
+- Daily limits use the requested timezone and count locked sessions on each day.
+  New sessions have whole-minute durations; the current time rounds forward and
+  free-window ends round backward so fractional seconds never cause overlap.
+- Wake-up/bedtime can cross midnight. Recurring events retain local wall-clock
+  times across DST; overnight commitments reserve both local days.
+- Locked history is returned unchanged by frontend merging. Its occupied intervals
+  and breaks are reserved. Completed/unfinished entries do not reduce remaining
+  minutes again; only the future portion of still-planned locked sessions reserves
+  remaining work. Past planned sessions imply no completion.
+- Requests allow up to 200 tasks, 1,000 events and 2,000 locked blocks, with
+  deadlines at most 366 days after current_time, timestamp years 0002?9997, and
+  a 1 MB JSON request body. Minutes must be integers.
+- Invalid input returns HTTP 400 with `error` and field-level `details`. Incorrect
+  content type returns 415. `/health` and `/docs` are available on the same app.
+
+See [the dashboard request fixture](../examples/schedule-request.json).
+The sample dates are fixed for reproducibility; normal UI requests use its current
+clock. Run `npm run test:live` to verify the three scenarios against actual Python.

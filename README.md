@@ -39,6 +39,34 @@ Balancing work and social life is hard for students, and the transition from hav
 
 ## API Integration
 
+### Dashboard endpoint: `POST /schedule`
+
+The dashboard now connects to the real FastAPI scheduler through `/schedule`.
+Use **Real backend** as the data source and click **Generate Schedule**. It accepts
+multiple tasks, fixed events, preferences, and locked history, then returns
+`study_blocks` and `unscheduled` as expected by the frontend. It handles recurring
+commitments, sleep, daily/session limits, breaks, and unfinished work.
+
+- [Dashboard JSON contract](frontend/API_CONTRACT.md)
+- [Example dashboard request](examples/schedule-request.json)
+- [Frontend setup and live browser test](frontend/README.md#live-backend-verification)
+
+From the repository root, run the complete Python checks:
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m unittest -v test_api test_availability test_schedule
+```
+
+From `frontend`, run `npm.cmd test`, `npm.cmd run lint`, `npm.cmd run build`,
+`npm.cmd run test:e2e`, and `npm.cmd run test:live`. The last command starts isolated
+frontend and backend servers and exercises actual Python scheduling through the UI.
+The existing browser regression suite uses intercepted responses for error cases;
+the live suite uses real HTTP and verifies all three scheduling scenarios.
+
+### Prototype endpoint: `POST /api/plan`
+
+The following single-assignment contract remains supported for the original demo.
+
 The planning API now lives in the existing **FastAPI backend** at
 `backend/app/api.py`. It calls `backend/app/scheduler.py` and
 `backend/app/availability.py`, integrated from the teammate's
@@ -82,8 +110,8 @@ app. Run only one server on the port. Stop it with Ctrl+C.
 
 Run `npm run dev` from `frontend` in a separate terminal (`npm install` on initial
 setup). Each teammate needs a local API process: `127.0.0.1` refers to the computer
-running the browser. The frontend owner still needs to wire their calendar buttons
-to the endpoint; the API integration does not modify their page or components.
+running the browser. The dashboard uses `/schedule`; the prototype endpoint below remains available
+for direct API testing.
 
 ### Request Contract
 
@@ -246,6 +274,6 @@ Tests exercise the actual FastAPI app and cover all three scenarios, validation,
 UTC conversion, CORS, sleep hours, fixed-event subtraction, and preserved entries.
 The original demo and availability tests are retained. Root `scheduler.py` and
 `availability.py` are compatibility imports for the canonical backend modules.
-The browser milestone still needs the frontend owner to wire their Generate Plan
-button and calendar to this contract.
+The browser dashboard uses the multi-assignment `/schedule` contract documented
+above; `/api/plan` retains the original single-assignment demo semantics.
 

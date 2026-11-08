@@ -19,9 +19,11 @@ network failure preservation, saved unfinished work after failed rescheduling, r
 independent demo/real workspaces, week/day navigation, and no page overflow at
 1440, 1024, 768, 390, and 320 pixels.
 
-Scheduling responses in browser tests are intercepted fixtures. The real `/schedule`
-endpoint is absent, so end-to-end Python scheduling and conflict calculation are
-**not yet tested**. The expected integration is in [API_CONTRACT.md](API_CONTRACT.md).
+The original regression tests use intercepted scheduling fixtures. The integration
+now implements `/schedule` and adds `npm run test:live`, which exercises the real
+Python server through the browser. It verifies 240/0, 180/0 and 120/60 minute
+scenarios, preserved history and refresh persistence. See
+[API_CONTRACT.md](API_CONTRACT.md) for the implemented contract.
 
 Desktop and mobile screenshots were visually reviewed. The bundled design skill's
 marketing-page gate did not pass: its first run reported 69 findings, including
